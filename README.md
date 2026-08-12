@@ -1,3 +1,5 @@
+![Screenboard — a screenshot selection moving straight to the clipboard](docs/images/screenboard-header.png)
+
 # Screenboard
 
 Screenshots, straight to your clipboard.
@@ -18,6 +20,10 @@ Screenboard is a local-first Chrome extension for capturing an area, the visible
 ## Install for development
 
 Requirements: Node.js 20+ and Chrome 116+.
+
+For the packaged release, download `screenboard-v0.1.0.zip` from the [latest release](https://github.com/anaremore/screenboard/releases/latest), extract it, then load the extracted folder from `chrome://extensions` with **Developer mode** enabled.
+
+To build from source:
 
 ```bash
 npm install

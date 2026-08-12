@@ -11,6 +11,7 @@ import type {
 } from '../shared/messages';
 import { normalizeSettings } from '../shared/settings';
 import type { CapturedSlice, CaptureSettings, CaptureType, FeedbackMessage, PageMetrics } from '../shared/types';
+import { isKnownProtectedPage } from '../shared/urls';
 
 const OFFSCREEN_PATH = 'offscreen.html';
 const JOBS_KEY = 'captureJobs';
@@ -335,6 +336,9 @@ async function orchestrate(message: CaptureRequestMessage): Promise<{ started: t
   const tabId = requireTabId(tab);
   await acquireJob(tabId, message.mode);
   try {
+    if (message.mode !== 'visible' && isKnownProtectedPage(tab.url)) {
+      throw new Error('Cannot access this protected browser page.');
+    }
     if (message.mode === 'area' || message.mode === 'element') {
       await startSelection(tab, message.mode);
       return { started: true };

@@ -42,6 +42,7 @@ function safeGeneratedPath(path, expectedName) {
 }
 
 safeGeneratedPath(extensionDirectory, '.e2e-extension');
+safeGeneratedPath(resultsDirectory, 'test-results');
 safeGeneratedPath(profileDirectory, '.e2e-profile');
 await rm(extensionDirectory, { recursive: true, force: true });
 await rm(profileDirectory, { recursive: true, force: true });
@@ -56,6 +57,7 @@ const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 // A directly opened popup tab does not receive the user-invocation activeTab grant.
 // The generated test copy gets broad host access solely so Puppeteer can drive the same capture code.
 manifest.host_permissions = ['<all_urls>'];
+manifest.permissions = [...manifest.permissions, 'tabs'];
 await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
 const fixture = await readFile(resolve('tests/e2e/fixture.html'));
@@ -213,12 +215,17 @@ try {
   const recentPopupHeight = await popupPage.$eval('.popup-shell', (element) => Math.ceil(element.getBoundingClientRect().height));
   await popupPage.setViewport({ width: 366, height: recentPopupHeight, deviceScaleFactor: 1 });
   await popupPage.screenshot({ path: resolve(resultsDirectory, 'popup-recent.png'), fullPage: true });
+  await popupPage.click('.recent-copy');
+  await popupPage.waitForFunction(() => document.querySelector('.notice.success')?.textContent?.includes('Copied again'));
 
   const targetSession = await browser.target().createCDPSession();
   await targetSession.send('Target.closeTarget', { targetId: activeWorkerTarget._targetId });
   await new Promise((resolvePromise) => setTimeout(resolvePromise, 300));
   const resumedPopup = popupPage;
   assert.equal((await extensionCall(resumedPopup, { type: 'LIST_RECENTS' })).captures.length, 1, 'History should survive a service-worker restart');
+  await resumedPopup.click('.danger-tool');
+  await resumedPopup.waitForSelector('.recent-item', { hidden: true });
+  assert.equal((await extensionCall(resumedPopup, { type: 'LIST_RECENTS' })).captures.length, 0, 'Delete should remove the local capture');
 
   const call = (message) => extensionCall(resumedPopup, message);
   const clear = () => call({ type: 'CLEAR_RECENTS' });
@@ -245,11 +252,13 @@ try {
   const regionStartedAt = Date.now();
   assert.equal((await begin('area')).started, true);
   await fixturePage.waitForSelector('#screenboard-capture-root');
+  assert.equal(await fixturePage.$('#screenboard-toast-root'), null, 'Previous feedback must be hidden before selecting');
   await fixturePage.mouse.move(100, 120);
   await fixturePage.mouse.down();
   await fixturePage.mouse.move(420, 340, { steps: 8 });
   await fixturePage.screenshot({ path: resolve(resultsDirectory, 'selection.png') });
   await fixturePage.mouse.up();
+  await fixturePage.waitForSelector('#screenboard-capture-root', { hidden: true });
   const region = await wait('area', regionStartedAt);
   const expectedRegionWidth = Math.round(320 * geometryBaseline.width / geometryViewport.width);
   const expectedRegionHeight = Math.round(220 * geometryBaseline.height / geometryViewport.height);
@@ -272,6 +281,8 @@ try {
   assert.equal((await begin('element')).started, true);
   await fixturePage.waitForSelector('#screenboard-capture-root');
   await fixturePage.hover('#known-element');
+  await fixturePage.keyboard.press('ArrowUp');
+  await fixturePage.keyboard.press('ArrowDown');
   await fixturePage.screenshot({ path: resolve(resultsDirectory, 'element-selection.png') });
   await fixturePage.click('#known-element');
   const element = await wait('element', elementStartedAt);
@@ -299,6 +310,25 @@ try {
   assert.equal(fullPage.height, Math.round(pageMetrics.pageHeight * geometryBaseline.height / geometryViewport.height));
   assert.equal(fullPage.sliceCount, Math.ceil(pageMetrics.pageHeight / pageMetrics.height));
   assert.equal(fullPage.clipboardOk, true);
+
+  const protectedTabId = await resumedPopup.evaluate(async () => {
+    const tabs = await chrome.tabs.query({});
+    return tabs.find((tab) => tab.url?.startsWith('chrome://extensions'))?.id;
+  });
+  assert.ok(protectedTabId, 'The Chrome extensions tab should be available to the test harness');
+  const protectedStartedAt = Date.now();
+  const protectedStart = await extensionCall(resumedPopup, {
+    type: 'CAPTURE_REQUEST',
+    mode: 'area',
+    tabId: protectedTabId,
+  });
+  assert.equal(protectedStart.started, true);
+  await resumedPopup.waitForFunction(async (completedAfter) => {
+    const value = (await chrome.storage.session.get('lastCaptureDiagnostics')).lastCaptureDiagnostics;
+    return value?.captureType === 'area' && value.failed === true && value.completedAt > completedAfter;
+  }, { timeout: 10_000 }, protectedStartedAt);
+  const protectedFailure = await latestDiagnostics();
+  assert.equal(protectedFailure.error, "Screenboard can't capture this protected Chrome page.");
 
   console.log(`E2E passed: extension ${extensionId}, visible ${visible.width}×${visible.height}, full page ${fullPage.width}×${fullPage.height}, ${fullPage.sliceCount} slices.`);
 } finally {
