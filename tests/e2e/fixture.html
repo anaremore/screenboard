@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Screenboard capture fixture</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body { width: 100%; min-height: 1960px; overflow-x: hidden; background: #f5f7fb; color: #152033; font-family: system-ui, sans-serif; }
+      .sticky { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; height: 56px; padding: 0 32px; background: #172033; color: white; font-weight: 650; }
+      .hero { height: 540px; padding: 72px 64px; background: linear-gradient(135deg, #dbeafe, #eff6ff); }
+      .hero h1 { margin: 0; font-size: 48px; letter-spacing: -.04em; }
+      .hero p { width: 420px; color: #52617a; font-size: 18px; }
+      #known-element { position: absolute; left: 180px; top: 176px; display: grid; place-items: center; width: 240px; height: 130px; border: 4px solid #2563eb; border-radius: 12px; background: #fff; color: #1746a2; font-weight: 700; box-shadow: 0 16px 34px rgba(37,99,235,.18); }
+      .band { display: flex; align-items: center; height: 420px; padding: 0 64px; font-size: 32px; font-weight: 700; }
+      .band.one { background: #dcfce7; color: #166534; }
+      .band.two { background: #fef3c7; color: #92400e; }
+      .band.three { background: #fce7f3; color: #9d174d; }
+      .footer { display: flex; align-items: center; height: 160px; padding: 0 64px; background: #172033; color: white; }
+    </style>
+  </head>
+  <body>
+    <header class="sticky">Screenboard deterministic fixture</header>
+    <section class="hero"><h1>Pixel-accurate capture</h1><p>Distinct blocks make slice order, seams, and element bounds easy to validate.</p><div id="known-element">Known 240 × 130 element</div></section>
+    <section class="band one">Section one · green</section>
+    <section class="band two">Section two · amber</section>
+    <section class="band three">Section three · rose</section>
+    <footer class="footer">End of deterministic page</footer>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+.pnpm-store/
+dist/
+.e2e-extension/
+.e2e-profile/
+coverage/
+test-results/
+*.log
+.DS_Store
+Thumbs.db

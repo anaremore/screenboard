@@ -1,0 +1,51 @@
+body { min-height: 100vh; }
+
+.options-page { width: min(640px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 36px; opacity: 0; }
+.options-page.ready { opacity: 1; }
+
+.options-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
+.options-brand { display: flex; align-items: center; gap: 12px; }
+.options-brand > span { display: flex; color: var(--accent); }
+.options-brand div { display: flex; flex-direction: column; }
+.options-brand strong { font-size: 17px; letter-spacing: -.02em; }
+.options-brand small { color: var(--text-muted); font-size: 12px; }
+.saved-indicator { display: flex; align-items: center; gap: 5px; color: var(--accent-text); font-size: 12px; opacity: 0; transition: opacity 150ms ease-out; }
+.saved-indicator.visible { opacity: 1; }
+
+.settings-group { margin-bottom: 20px; overflow: hidden; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); box-shadow: 0 1px 2px rgba(15,23,42,.03); }
+.group-heading { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); }
+.group-heading h1, .group-heading h2 { margin: 0; font-size: 13px; font-weight: 650; letter-spacing: -.01em; }
+.group-heading p { margin: 3px 0 0; color: var(--text-muted); font-size: 11px; }
+.setting-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 67px; padding: 11px 18px; border-bottom: 1px solid var(--border); }
+.setting-row:last-child { border-bottom: 0; }
+.setting-row strong { display: block; font-size: 12px; font-weight: 600; }
+.setting-row p { margin: 2px 0 0; color: var(--text-muted); font-size: 11px; }
+.setting-row label { flex: 1; }
+
+.switch { position: relative; flex: 0 0 auto; width: 38px; height: 22px; padding: 0; border: 0; border-radius: 11px; background: var(--border-strong); cursor: pointer; transition: background 160ms ease-out; }
+.switch span { position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(15,23,42,.24); transition: transform 160ms ease-out; }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch[aria-checked="true"] span { transform: translateX(16px); }
+
+.static-value { padding: 4px 8px; border-radius: 6px; background: var(--surface-subtle); color: var(--text-secondary); font-size: 11px; font-weight: 600; }
+select { min-width: 72px; height: 34px; padding: 0 28px 0 10px; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface-raised); color: var(--text); cursor: pointer; font-size: 12px; }
+select:disabled { cursor: not-allowed; opacity: .5; }
+.danger-row { background: color-mix(in srgb, var(--danger-soft) 38%, transparent); }
+.danger-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 0 10px; border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border)); border-radius: 7px; background: var(--surface); color: var(--danger); cursor: pointer; font-size: 11px; font-weight: 600; }
+.danger-button:hover { background: var(--danger-soft); }
+
+.shortcut-row { display: flex; align-items: center; justify-content: space-between; min-height: 46px; padding: 0 18px; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 12px; }
+kbd { padding: 4px 7px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 6px; background: var(--surface-subtle); color: var(--text-secondary); font: 500 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace; }
+.link-button { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 42px; border: 0; background: transparent; color: var(--accent-text); cursor: pointer; font-size: 11px; font-weight: 600; }
+.link-button:hover { background: var(--accent-soft); }
+
+.privacy-note { display: flex; gap: 12px; margin: 24px 0; padding: 15px 17px; border: 1px solid color-mix(in srgb, #22a06b 28%, var(--border)); border-radius: 10px; background: color-mix(in srgb, #22a06b 7%, var(--surface)); color: #178458; }
+.privacy-note svg { flex: 0 0 auto; margin-top: 1px; }
+.privacy-note strong { display: block; color: var(--text); font-size: 12px; }
+.privacy-note p { margin: 2px 0 0; color: var(--text-secondary); font-size: 11px; }
+footer { text-align: center; color: var(--text-muted); font-size: 10px; }
+
+@media (max-width: 520px) {
+  .options-page { width: min(100% - 20px, 640px); padding-top: 24px; }
+  .setting-row { gap: 12px; padding-inline: 14px; }
+}
