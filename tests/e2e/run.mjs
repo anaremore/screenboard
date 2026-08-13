@@ -119,7 +119,8 @@ try {
   const optionsUrl = `chrome-extension://${extensionId}/options.html`;
 
   const fixturePage = await browser.newPage();
-  await fixturePage.setViewport({ width: 900, height: 640, deviceScaleFactor: 1.25 });
+  // 1024 × 640 CSS pixels at 1.25 DPR produces Chrome Web Store's preferred 1280 × 800 screenshots.
+  await fixturePage.setViewport({ width: 1024, height: 640, deviceScaleFactor: 1.25 });
   await fixturePage.goto(fixtureUrl, { waitUntil: 'domcontentloaded' });
   const popupPage = await browser.newPage();
   await popupPage.setViewport({ width: 366, height: 486, deviceScaleFactor: 1 });

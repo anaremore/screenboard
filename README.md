@@ -6,6 +6,8 @@ Screenshots, straight to your clipboard.
 
 Screenboard is a local-first Chrome extension for capturing an area, the visible viewport, a full page, or a DOM element. A successful capture is already a PNG on the clipboard, ready to paste. There is no account, server, upload step, editor, or analytics dependency.
 
+![Screenboard confirms that a completed screenshot was copied to the clipboard](docs/images/screenboard-product.png)
+
 ## Features
 
 - Clipboard-first area capture with drag-in-any-direction selection and live dimensions
@@ -77,6 +79,8 @@ Capture jobs are recorded in `chrome.storage.session`; durable images live as bl
 Screenshot pixels, thumbnails, URLs, and capture metadata are never sent to an external service. Screenboard has no network client, account, telemetry, or remote processing. Captures remain in the browser's local extension storage until the user deletes them or automatic history cleanup removes older items.
 
 The production extension requests only `activeTab`, `scripting`, `storage`, `offscreen`, `clipboardWrite`, and `downloads`. It does not request permanent access to every website.
+
+See the full [privacy policy](PRIVACY.md) and the ready-to-paste [Chrome Web Store listing guide](docs/chrome-web-store-listing.md).
 
 ## Known limitations
 

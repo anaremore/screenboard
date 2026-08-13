@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "node tests/e2e/run.mjs",
+    "store:assets": "node scripts/generate-store-assets.mjs",
     "check": "tsc --noEmit && eslint . && vitest run && vite build"
   },
   "packageManager": "pnpm@11.16.0",

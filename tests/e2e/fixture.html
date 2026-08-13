@@ -3,29 +3,50 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Screenboard capture fixture</title>
+    <title>Northstar creative dashboard</title>
     <style>
       * { box-sizing: border-box; }
       html, body { margin: 0; }
-      body { width: 100%; min-height: 1960px; overflow-x: hidden; background: #f5f7fb; color: #152033; font-family: system-ui, sans-serif; }
-      .sticky { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; height: 56px; padding: 0 32px; background: #172033; color: white; font-weight: 650; }
-      .hero { height: 540px; padding: 72px 64px; background: linear-gradient(135deg, #dbeafe, #eff6ff); }
-      .hero h1 { margin: 0; font-size: 48px; letter-spacing: -.04em; }
-      .hero p { width: 420px; color: #52617a; font-size: 18px; }
-      #known-element { position: absolute; left: 180px; top: 176px; display: grid; place-items: center; width: 240px; height: 130px; border: 4px solid #2563eb; border-radius: 12px; background: #fff; color: #1746a2; font-weight: 700; box-shadow: 0 16px 34px rgba(37,99,235,.18); }
-      .band { display: flex; align-items: center; height: 420px; padding: 0 64px; font-size: 32px; font-weight: 700; }
+      body { width: 100%; min-height: 1960px; overflow-x: hidden; background: #f4f7fb; color: #14213a; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      .sticky { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 40px; background: #101827; color: white; }
+      .brand { display: flex; align-items: center; gap: 11px; font-weight: 720; letter-spacing: -.01em; }
+      .brand-mark { width: 26px; height: 26px; border: 7px solid #3b82f6; border-radius: 8px; background: #dbeafe; }
+      .nav { display: flex; gap: 26px; color: #aebbd0; font-size: 13px; }
+      .hero { position: relative; height: 540px; padding: 58px 64px; overflow: hidden; background: radial-gradient(circle at 76% 18%, #dbeafe 0, transparent 34%), linear-gradient(135deg, #eef4ff, #f8fbff 62%, #e9fff6); }
+      .eyebrow { margin: 0 0 12px; color: #2563eb; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+      .hero h1 { width: 520px; margin: 0; font-size: 48px; line-height: 1.02; letter-spacing: -.045em; }
+      .hero > p { width: 430px; margin-top: 18px; color: #56657d; font-size: 17px; line-height: 1.55; }
+      #known-element { position: absolute; left: 180px; top: 330px; width: 240px; height: 130px; padding: 54px 22px 18px; border: 1px solid #c9d7eb; border-radius: 16px; background: rgba(255,255,255,.96); color: #64748b; font-size: 13px; box-shadow: 0 22px 48px rgba(35,72,126,.16); }
+      #known-element::before { position: absolute; top: 20px; left: 22px; color: #14213a; content: 'Assets ready'; font-size: 15px; font-weight: 750; }
+      #known-element::after { position: absolute; right: 22px; bottom: 17px; color: #16a16d; content: '8 of 10'; font-size: 22px; font-weight: 780; }
+      .chart-card { position: absolute; right: 60px; top: 68px; width: 430px; height: 338px; padding: 28px; border: 1px solid #d9e3f1; border-radius: 22px; background: rgba(255,255,255,.86); box-shadow: 0 26px 70px rgba(36,65,110,.14); }
+      .chart-head { display: flex; align-items: center; justify-content: space-between; }
+      .chart-head strong { font-size: 16px; }
+      .pill { padding: 7px 10px; border-radius: 999px; background: #e8fff5; color: #0f8a5f; font-size: 12px; font-weight: 750; }
+      .chart { display: flex; align-items: flex-end; gap: 15px; height: 178px; margin-top: 34px; border-bottom: 1px solid #dfe7f2; }
+      .chart i { flex: 1; border-radius: 8px 8px 0 0; background: linear-gradient(#4d8cff, #2563eb); }
+      .chart i:nth-child(1) { height: 42%; } .chart i:nth-child(2) { height: 62%; } .chart i:nth-child(3) { height: 52%; } .chart i:nth-child(4) { height: 82%; } .chart i:nth-child(5) { height: 72%; } .chart i:nth-child(6) { height: 94%; }
+      .legend { display: flex; justify-content: space-between; margin-top: 18px; color: #718096; font-size: 12px; }
+      .band { display: flex; align-items: center; justify-content: space-between; height: 420px; padding: 0 64px; font-size: 32px; font-weight: 740; }
+      .band small { max-width: 390px; font-size: 16px; font-weight: 450; line-height: 1.6; }
       .band.one { background: #dcfce7; color: #166534; }
       .band.two { background: #fef3c7; color: #92400e; }
       .band.three { background: #fce7f3; color: #9d174d; }
-      .footer { display: flex; align-items: center; height: 160px; padding: 0 64px; background: #172033; color: white; }
+      .footer { display: flex; align-items: center; justify-content: space-between; height: 160px; padding: 0 64px; background: #101827; color: white; }
     </style>
   </head>
   <body>
-    <header class="sticky">Screenboard deterministic fixture</header>
-    <section class="hero"><h1>Pixel-accurate capture</h1><p>Distinct blocks make slice order, seams, and element bounds easy to validate.</p><div id="known-element">Known 240 × 130 element</div></section>
-    <section class="band one">Section one · green</section>
-    <section class="band two">Section two · amber</section>
-    <section class="band three">Section three · rose</section>
-    <footer class="footer">End of deterministic page</footer>
+    <header class="sticky"><div class="brand"><span class="brand-mark"></span>Northstar</div><nav class="nav"><span>Overview</span><span>Campaigns</span><span>Reports</span></nav></header>
+    <section class="hero">
+      <p class="eyebrow">Campaign overview</p>
+      <h1>Make every creative decision visible.</h1>
+      <p>Keep the team aligned with a clear snapshot of the work, results, and next actions.</p>
+      <div id="known-element">Launch collection</div>
+      <div class="chart-card"><div class="chart-head"><strong>Weekly reach</strong><span class="pill">+18.4%</span></div><div class="chart"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="legend"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div></div>
+    </section>
+    <section class="band one"><span>Creative approvals</span><small>Review campaign assets, comments, and decisions in one calm workspace.</small></section>
+    <section class="band two"><span>Launch readiness</span><small>See the final checks and owners before every handoff.</small></section>
+    <section class="band three"><span>Performance notes</span><small>Capture the insights worth carrying into the next iteration.</small></section>
+    <footer class="footer"><strong>Northstar creative workspace</strong><span>Built for focused teams</span></footer>
   </body>
 </html>
