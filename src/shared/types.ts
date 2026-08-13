@@ -38,9 +38,7 @@ export interface CapturedSlice extends FullPageSlice {
 }
 
 export interface CaptureSettings {
-  copyToClipboard: boolean;
   saveAutomatically: boolean;
-  showConfirmation: boolean;
   keepRecent: boolean;
   maxRecent: number;
 }

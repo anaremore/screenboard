@@ -48,10 +48,9 @@ export function Options() {
       </header>
 
       <section className="settings-group" aria-labelledby="after-capture-heading">
-        <div className="group-heading"><h1 id="after-capture-heading">After capture</h1><p>Choose what happens as soon as a screenshot is ready.</p></div>
-        <div className="setting-row"><div><strong>Copy to clipboard</strong><p>Ready to paste immediately into any app.</p></div><Toggle label="Copy to clipboard" checked={settings.copyToClipboard} onChange={(value) => update({ copyToClipboard: value })} /></div>
+        <div className="group-heading"><h1 id="after-capture-heading">After capture</h1><p>Every screenshot is copied and confirmed automatically.</p></div>
+        <div className="setting-row"><div><strong>Clipboard</strong><p>The newest screenshot is always ready to paste.</p></div><span className="static-value">Always</span></div>
         <div className="setting-row"><div><strong>Save automatically</strong><p>Download a PNG in addition to copying it.</p></div><Toggle label="Save automatically" checked={settings.saveAutomatically} onChange={(value) => update({ saveAutomatically: value })} /></div>
-        <div className="setting-row"><div><strong>Show confirmation</strong><p>Display a small confirmation after capture.</p></div><Toggle label="Show confirmation" checked={settings.showConfirmation} onChange={(value) => update({ showConfirmation: value })} /></div>
       </section>
 
       <section className="settings-group" aria-labelledby="image-heading">

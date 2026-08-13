@@ -12,7 +12,7 @@ Screenboard is a local-first Chrome extension for capturing an area, the visible
 - One-click visible-area capture
 - Full-page scroll and stitch with partial-slice handling and scroll restoration
 - Element picker with parent/child keyboard traversal
-- Automatic PNG clipboard writes and optional automatic downloads
+- Unconditional PNG clipboard writes with clear completion confirmation and optional automatic downloads
 - Local recent-capture history with copy, save, and delete actions
 - Compact settings, light/dark themes, keyboard focus states, and reduced-motion support
 - Friendly handling for protected pages, lost tabs, clipboard failures, and oversized pages

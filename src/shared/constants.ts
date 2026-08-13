@@ -1,9 +1,7 @@
 import type { CaptureSettings } from './types';
 
 export const DEFAULT_SETTINGS: Readonly<CaptureSettings> = {
-  copyToClipboard: true,
   saveAutomatically: false,
-  showConfirmation: true,
   keepRecent: true,
   maxRecent: 10,
 };

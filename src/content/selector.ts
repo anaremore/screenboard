@@ -213,6 +213,10 @@ function startElementSelection(): void {
 
 function showToast(message: string, kind: FeedbackKind): void {
   const { host, shadow } = createHost(TOAST_ID);
+  host.setAttribute('role', 'status');
+  host.setAttribute('aria-live', 'polite');
+  host.setAttribute('aria-atomic', 'true');
+  host.setAttribute('aria-label', message);
   const icon = kind === 'success'
     ? '<path d="m5 12 4 4L19 6"/>'
     : kind === 'warning'
@@ -223,7 +227,7 @@ function showToast(message: string, kind: FeedbackKind): void {
     svg { flex: 0 0 auto; color: ${kind === 'success' ? '#86efac' : kind === 'warning' ? '#fde68a' : '#fca5a5'}; }
     @keyframes enter { to { opacity: 1; transform: translate(-50%, 0); } }
     @keyframes leave { to { opacity: 0; transform: translate(-50%, 6px); } }
-  </style><div class="toast" role="status" aria-live="polite"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon}</svg><span></span></div>`;
+  </style><div class="toast"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon}</svg><span></span></div>`;
   const label = shadow.querySelector('span');
   if (label) label.textContent = message;
   window.setTimeout(() => host.remove(), 2500);

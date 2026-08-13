@@ -179,6 +179,9 @@ try {
     }, { timeout: 20_000, polling: 100 }, mode, after);
     return diagnostics();
   };
+  const waitForCopiedFeedback = () => fixturePage.waitForFunction((expectedMessage) => (
+    document.getElementById('screenboard-toast-root')?.getAttribute('aria-label') === expectedMessage
+  ), { timeout: 10_000, polling: 50 }, 'Screenshot complete — copied to clipboard');
 
   await clearRecents();
   const visibleStartedAt = Date.now();
@@ -187,6 +190,8 @@ try {
   assert.notEqual(visible.failed, true, visible.error);
   assert.equal(visible.clipboardAttempted, true);
   assert.equal(visible.clipboardOk, true, `Offscreen image clipboard write failed: ${visible.clipboardError ?? 'unknown error'}`);
+  await waitForCopiedFeedback();
+  await fixturePage.screenshot({ path: resolve(resultsDirectory, 'capture-complete.png') });
   const visibleRecents = await recents();
   assert.equal(visibleRecents.length, 1);
   const downloadDirectory = resolve(resultsDirectory, 'downloads');
@@ -248,6 +253,7 @@ try {
   const baselineStartedAt = Date.now();
   assert.equal((await begin('visible')).started, true);
   const geometryBaseline = await wait('visible', baselineStartedAt);
+  await waitForCopiedFeedback();
   await clear();
   const regionStartedAt = Date.now();
   assert.equal((await begin('area')).started, true);
@@ -265,6 +271,7 @@ try {
   assert.equal(region.width, expectedRegionWidth);
   assert.equal(region.height, expectedRegionHeight);
   assert.equal(region.clipboardOk, true);
+  await waitForCopiedFeedback();
 
   await clear();
   const beforeCancel = (await latestDiagnostics()).completedAt;
@@ -288,6 +295,8 @@ try {
   const element = await wait('element', elementStartedAt);
   assert.equal(element.width, Math.round(240 * geometryBaseline.width / geometryViewport.width));
   assert.equal(element.height, Math.round(130 * geometryBaseline.height / geometryViewport.height));
+  assert.equal(element.clipboardOk, true);
+  await waitForCopiedFeedback();
 
   await clear();
   await fixturePage.evaluate(() => window.scrollTo(0, 173));
@@ -310,6 +319,7 @@ try {
   assert.equal(fullPage.height, Math.round(pageMetrics.pageHeight * geometryBaseline.height / geometryViewport.height));
   assert.equal(fullPage.sliceCount, Math.ceil(pageMetrics.pageHeight / pageMetrics.height));
   assert.equal(fullPage.clipboardOk, true);
+  await waitForCopiedFeedback();
 
   const protectedTabId = await resumedPopup.evaluate(async () => {
     const tabs = await chrome.tabs.query({});

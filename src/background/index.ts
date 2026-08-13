@@ -1,4 +1,5 @@
 import { CAPTURE_INTERVAL_MS, DEFAULT_SETTINGS, MAX_CANVAS_DIMENSION, MAX_CANVAS_PIXELS } from '../shared/constants';
+import { captureFeedback } from '../shared/capture-feedback';
 import { planFullPageSlices } from '../shared/full-page';
 import type {
   CaptureRequestMessage,
@@ -179,9 +180,7 @@ async function finalizeCapture(
   captureType: CaptureType,
   details: { sliceCount?: number } = {},
 ): Promise<void> {
-  const clipboard = captureSettings.copyToClipboard
-    ? await copyCaptureToTab(tabId, result.id)
-    : result.clipboard;
+  const clipboard = await copyCaptureToTab(tabId, result.id);
   const completedResult = { ...result, clipboard };
   const saved = captureSettings.saveAutomatically ? await exportCapture(completedResult.id).catch(() => false) : false;
   const copied = completedResult.clipboard.attempted && completedResult.clipboard.ok;
@@ -205,14 +204,7 @@ async function finalizeCapture(
     },
   });
 
-  if (captureSettings.showConfirmation || (completedResult.clipboard.attempted && !completedResult.clipboard.ok)) {
-    const feedback: FeedbackMessage = copied || !completedResult.clipboard.attempted
-      ? { kind: 'success', message: copied ? 'Copied to clipboard' : saved ? 'PNG saved' : 'Capture ready in Recent' }
-      : saved
-        ? { kind: 'warning', message: 'Clipboard blocked — PNG saved instead' }
-        : { kind: 'warning', message: 'Clipboard blocked — capture kept in Recent' };
-    await showFeedback(tabId, feedback);
-  }
+  await showFeedback(tabId, captureFeedback(copied, saved));
 }
 
 async function processVisible(tab: chrome.tabs.Tab): Promise<void> {
