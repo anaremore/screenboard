@@ -73,7 +73,7 @@ export function Options() {
       </section>
 
       <aside className="privacy-note"><ShieldCheck size={20} aria-hidden="true" /><div><strong>Private by design</strong><p>Screenshots, page details, and capture history never leave your browser.</p></div></aside>
-      <footer>Screenboard 0.1.0</footer>
+      <footer>Screenboard {chrome.runtime.getManifest().version}</footer>
     </main>
   );
 }
