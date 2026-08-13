@@ -6,7 +6,7 @@ Screenshots, straight to your clipboard.
 
 Screenboard is a local-first Chrome extension for capturing an area, the visible viewport, a full page, or a DOM element. A successful capture is already a PNG on the clipboard, ready to paste. There is no account, server, upload step, editor, or analytics dependency.
 
-![Screenboard confirms that a completed screenshot was copied to the clipboard](docs/images/screenboard-product.png)
+![Screenboard popup showing its four capture modes and one recent screenshot](docs/images/screenboard-product.png)
 
 ## Features
 

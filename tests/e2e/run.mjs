@@ -123,7 +123,7 @@ try {
   await fixturePage.setViewport({ width: 1024, height: 640, deviceScaleFactor: 1.25 });
   await fixturePage.goto(fixtureUrl, { waitUntil: 'domcontentloaded' });
   const popupPage = await browser.newPage();
-  await popupPage.setViewport({ width: 366, height: 486, deviceScaleFactor: 1 });
+  await popupPage.setViewport({ width: 366, height: 486, deviceScaleFactor: 2 });
   await popupPage.goto(popupUrl, { waitUntil: 'domcontentloaded' });
   await popupPage.waitForSelector('.popup-shell');
   const activeWorkerTarget = await browser.waitForTarget(
@@ -131,7 +131,7 @@ try {
     { timeout: 15_000 },
   );
   const emptyPopupHeight = await popupPage.$eval('.popup-shell', (element) => Math.ceil(element.getBoundingClientRect().height));
-  await popupPage.setViewport({ width: 366, height: emptyPopupHeight, deviceScaleFactor: 1 });
+  await popupPage.setViewport({ width: 366, height: emptyPopupHeight, deviceScaleFactor: 2 });
   const settleTheme = (page) => page.evaluate(() => new Promise((resolvePromise) => {
     requestAnimationFrame(() => requestAnimationFrame(resolvePromise));
   }));
@@ -219,7 +219,7 @@ try {
   await popupPage.waitForSelector('.recent-item');
   await popupPage.evaluate(() => { document.documentElement.style.colorScheme = 'light'; });
   const recentPopupHeight = await popupPage.$eval('.popup-shell', (element) => Math.ceil(element.getBoundingClientRect().height));
-  await popupPage.setViewport({ width: 366, height: recentPopupHeight, deviceScaleFactor: 1 });
+  await popupPage.setViewport({ width: 366, height: recentPopupHeight, deviceScaleFactor: 2 });
   await popupPage.screenshot({ path: resolve(resultsDirectory, 'popup-recent.png'), fullPage: true });
   await popupPage.click('.recent-copy');
   await popupPage.waitForFunction(() => document.querySelector('.notice.success')?.textContent?.includes('Copied again'));
