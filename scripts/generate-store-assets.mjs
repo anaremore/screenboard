@@ -1,4 +1,4 @@
-import { access, copyFile, mkdir } from 'node:fs/promises';
+import { access, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import sharp from 'sharp';
 
@@ -15,6 +15,7 @@ const required = [
   input('selection.png'),
   input('element-selection.png'),
   input('popup-recent.png'),
+  input('popup-recent-dark.png'),
   input('settings.png'),
 ];
 
@@ -45,21 +46,23 @@ for (const [source, name] of [
     .toFile(resolve(screenshots, name));
 }
 
-const popup = await sharp(input('popup-recent.png')).resize({ width: 470 }).png().toBuffer();
+const popupLight = await sharp(input('popup-recent.png')).resize({ width: 500 }).png().toBuffer();
+const popupDark = await sharp(input('popup-recent-dark.png')).resize({ width: 500 }).png().toBuffer();
 const settings = await sharp(input('settings.png')).resize({ height: 700 }).png().toBuffer();
 
 await sharp(svg(1280, 800, `
-  <defs><linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#0d1524"/><stop offset="1" stop-color="#17243a"/></linearGradient></defs>
-  <rect width="1280" height="800" fill="url(#bg)"/>
-  <circle cx="1120" cy="105" r="360" fill="#2563eb" opacity=".16"/>
-  <rect x="730" y="84" width="500" height="632" rx="34" fill="#ffffff" opacity=".07"/>
-  <text x="84" y="194" fill="#78a7ff" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="3">SCREENBOARD</text>
-  <text x="84" y="282" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="60" font-weight="750">Capture. Copy. Paste.</text>
-  <text x="84" y="424" fill="#b7c5da" font-family="Segoe UI, Arial, sans-serif" font-size="25">Choose area, element, visible, or full page.</text>
-  <text x="84" y="461" fill="#b7c5da" font-family="Segoe UI, Arial, sans-serif" font-size="25">Recent captures stay on this device.</text>
-  <circle cx="96" cy="548" r="7" fill="#28c98b"/><text x="118" y="556" fill="#dce7f7" font-family="Segoe UI, Arial, sans-serif" font-size="21">Copied automatically as PNG.</text>
+  <rect width="1280" height="800" fill="#0f1929"/>
+  <text x="80" y="82" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="38" font-weight="750">Light and dark</text>
+  <text x="80" y="121" fill="#aebed5" font-family="Segoe UI, Arial, sans-serif" font-size="20">Screenboard follows your system theme.</text>
+  <text x="80" y="180" fill="#8fa2bd" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="2">LIGHT</text>
+  <text x="700" y="180" fill="#8fa2bd" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="2">DARK</text>
+  <rect x="64" y="202" width="532" height="530" rx="28" fill="#e9eef5"/>
+  <rect x="684" y="202" width="532" height="530" rx="28" fill="#19283f"/>
 `))
-  .composite([{ input: popup, left: 745, top: 153 }])
+  .composite([
+    { input: popupLight, left: 80, top: 218 },
+    { input: popupDark, left: 700, top: 218 },
+  ])
   .png({ compressionLevel: 9 })
   .toFile(resolve(screenshots, '04-popup-and-recents.png'));
 
@@ -100,20 +103,28 @@ await sharp(svg(1400, 560, '<rect width="1400" height="560" fill="#0f1929"/>'))
   .png({ compressionLevel: 9 })
   .toFile(output('marquee-promo-1400x560.png'));
 
-const headerPopup = await sharp(input('popup-recent.png')).resize({ width: 500 }).png().toBuffer();
+const headerPopupLight = await sharp(input('popup-recent.png')).resize({ width: 430 }).png().toBuffer();
+const headerPopupDark = await sharp(input('popup-recent-dark.png')).resize({ width: 430 }).png().toBuffer();
 const headerIcon = await sharp(iconSource).resize(96, 96).png().toBuffer();
-await sharp(svg(1920, 720, '<rect width="1920" height="720" fill="#0f1929"/>'))
+await sharp(svg(1600, 720, '<rect width="1600" height="720" fill="#0f1929"/>'))
   .composite([
-    { input: svg(1920, 720, '<text x="238" y="227" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="78" font-weight="760">Screenboard</text><text x="116" y="362" fill="#f4f7ff" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="680">Screenshots, straight to your clipboard.</text><text x="116" y="424" fill="#b9c7db" font-family="Segoe UI, Arial, sans-serif" font-size="26">Area, element, visible, or full page.</text><circle cx="124" cy="494" r="8" fill="#2dd69b"/><text x="150" y="503" fill="#dce7f7" font-family="Segoe UI, Arial, sans-serif" font-size="23">Nothing is uploaded.</text><rect x="1210" y="58" width="560" height="604" rx="32" fill="#17253a"/>') },
-    { input: headerIcon, left: 116, top: 150 },
-    { input: headerPopup, left: 1240, top: 88 },
+    { input: svg(1600, 720, '<text x="186" y="207" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="66" font-weight="760">Screenboard</text><text x="72" y="334" fill="#f4f7ff" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="680">Screenshots, straight</text><text x="72" y="378" fill="#f4f7ff" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="680">to your clipboard.</text><text x="72" y="443" fill="#b9c7db" font-family="Segoe UI, Arial, sans-serif" font-size="23">Area, visible area, full page, or element.</text><text x="620" y="113" fill="#8fa2bd" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2">LIGHT</text><text x="1080" y="113" fill="#8fa2bd" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2">DARK</text><rect x="604" y="132" width="462" height="498" rx="28" fill="#e9eef5"/><rect x="1064" y="132" width="462" height="498" rx="28" fill="#19283f"/>') },
+    { input: headerIcon, left: 72, top: 130 },
+    { input: headerPopupLight, left: 620, top: 148 },
+    { input: headerPopupDark, left: 1080, top: 148 },
   ])
   .png({ compressionLevel: 9 })
   .toFile(resolve('docs/images/screenboard-header.png'));
 
-await copyFile(input('popup-recent.png'), resolve('docs/images/screenboard-product.png'));
-
-const popupMetadata = await sharp(input('popup-recent.png')).metadata();
+const productPopupLight = await sharp(input('popup-recent.png')).resize({ width: 580 }).png().toBuffer();
+const productPopupDark = await sharp(input('popup-recent-dark.png')).resize({ width: 580 }).png().toBuffer();
+await sharp(svg(1320, 680, '<rect width="660" height="680" fill="#eef2f7"/><rect x="660" width="660" height="680" fill="#0f1929"/><text x="48" y="55" fill="#52617a" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="2">LIGHT</text><text x="708" y="55" fill="#8fa2bd" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="2">DARK</text>'))
+  .composite([
+    { input: productPopupLight, left: 40, top: 76 },
+    { input: productPopupDark, left: 700, top: 76 },
+  ])
+  .png({ compressionLevel: 9 })
+  .toFile(resolve('docs/images/screenboard-product.png'));
 
 const expectedAssets = [
   [output('icon-128.png'), 128, 128],
@@ -124,8 +135,8 @@ const expectedAssets = [
   [resolve(screenshots, '03-capture-an-element.png'), 1280, 800],
   [resolve(screenshots, '04-popup-and-recents.png'), 1280, 800],
   [resolve(screenshots, '05-settings-and-privacy.png'), 1280, 800],
-  [resolve('docs/images/screenboard-header.png'), 1920, 720],
-  [resolve('docs/images/screenboard-product.png'), popupMetadata.width, popupMetadata.height],
+  [resolve('docs/images/screenboard-header.png'), 1600, 720],
+  [resolve('docs/images/screenboard-product.png'), 1320, 680],
 ];
 
 for (const [path, width, height] of expectedAssets) {

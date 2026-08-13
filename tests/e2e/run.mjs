@@ -221,6 +221,13 @@ try {
   const recentPopupHeight = await popupPage.$eval('.popup-shell', (element) => Math.ceil(element.getBoundingClientRect().height));
   await popupPage.setViewport({ width: 366, height: recentPopupHeight, deviceScaleFactor: 2 });
   await popupPage.screenshot({ path: resolve(resultsDirectory, 'popup-recent.png'), fullPage: true });
+  await popupPage.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
+  await popupPage.evaluate(() => { document.documentElement.style.colorScheme = 'dark'; });
+  await settleTheme(popupPage);
+  await popupPage.screenshot({ path: resolve(resultsDirectory, 'popup-recent-dark.png'), fullPage: true });
+  await popupPage.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+  await popupPage.evaluate(() => { document.documentElement.style.colorScheme = 'light'; });
+  await settleTheme(popupPage);
   await popupPage.click('.recent-copy');
   await popupPage.waitForFunction(() => document.querySelector('.notice.success')?.textContent?.includes('Copied again'));
 
