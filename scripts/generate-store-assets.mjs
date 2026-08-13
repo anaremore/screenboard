@@ -103,15 +103,11 @@ await sharp(svg(1400, 560, '<rect width="1400" height="560" fill="#0f1929"/>'))
   .png({ compressionLevel: 9 })
   .toFile(output('marquee-promo-1400x560.png'));
 
-const headerPopupLight = await sharp(input('popup-recent.png')).resize({ width: 430 }).png().toBuffer();
-const headerPopupDark = await sharp(input('popup-recent-dark.png')).resize({ width: 430 }).png().toBuffer();
 const headerIcon = await sharp(iconSource).resize(96, 96).png().toBuffer();
-await sharp(svg(1600, 720, '<rect width="1600" height="720" fill="#0f1929"/>'))
+await sharp(svg(1600, 400, '<rect width="1600" height="400" fill="#0f1929"/>'))
   .composite([
-    { input: svg(1600, 720, '<text x="186" y="207" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="66" font-weight="760">Screenboard</text><text x="72" y="334" fill="#f4f7ff" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="680">Screenshots, straight</text><text x="72" y="378" fill="#f4f7ff" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="680">to your clipboard.</text><text x="72" y="443" fill="#b9c7db" font-family="Segoe UI, Arial, sans-serif" font-size="23">Area, visible area, full page, or element.</text><text x="620" y="113" fill="#8fa2bd" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2">LIGHT</text><text x="1080" y="113" fill="#8fa2bd" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2">DARK</text><rect x="604" y="132" width="462" height="498" rx="28" fill="#e9eef5"/><rect x="1064" y="132" width="462" height="498" rx="28" fill="#19283f"/>') },
-    { input: headerIcon, left: 72, top: 130 },
-    { input: headerPopupLight, left: 620, top: 148 },
-    { input: headerPopupDark, left: 1080, top: 148 },
+    { input: svg(1600, 400, '<text x="650" y="178" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="74" font-weight="760">Screenboard</text><text x="800" y="282" fill="#c0ccdd" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="600" text-anchor="middle">Screenshots, straight to your clipboard.</text>') },
+    { input: headerIcon, left: 526, top: 102 },
   ])
   .png({ compressionLevel: 9 })
   .toFile(resolve('docs/images/screenboard-header.png'));
@@ -135,7 +131,7 @@ const expectedAssets = [
   [resolve(screenshots, '03-capture-an-element.png'), 1280, 800],
   [resolve(screenshots, '04-popup-and-recents.png'), 1280, 800],
   [resolve(screenshots, '05-settings-and-privacy.png'), 1280, 800],
-  [resolve('docs/images/screenboard-header.png'), 1600, 720],
+  [resolve('docs/images/screenboard-header.png'), 1600, 400],
   [resolve('docs/images/screenboard-product.png'), 1320, 680],
 ];
 
