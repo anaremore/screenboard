@@ -11,7 +11,6 @@ const output = (name) => resolve('store-assets', name);
 
 const required = [
   iconSource,
-  input('capture-complete.png'),
   input('selection.png'),
   input('element-selection.png'),
   input('popup-recent.png'),
@@ -48,34 +47,19 @@ for (const [source, name] of [
 const popupLight = await sharp(input('popup-recent.png')).resize({ width: 500 }).png().toBuffer();
 const popupDark = await sharp(input('popup-recent-dark.png')).resize({ width: 500 }).png().toBuffer();
 const settings = await sharp(input('settings.png')).resize({ height: 700 }).png().toBuffer();
-const heroIcon = await sharp(iconSource).resize(52, 52).png().toBuffer();
-
-const clipboardToast = svg(510, 66, `
-  <rect x="1" y="1" width="508" height="64" rx="12" fill="#111827" stroke="#465268" stroke-width="2"/>
-  <path d="M25 34l7 7 14-17" fill="none" stroke="#55d9a4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="61" y="40" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="650">Screenshot complete — copied to clipboard</text>
-`);
+const primaryPopup = await sharp(input('popup-recent.png')).resize({ width: 540 }).png().toBuffer();
 
 await sharp(svg(1280, 800, `
   <defs>
     <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#0c1524"/><stop offset="1" stop-color="#13243a"/></linearGradient>
   </defs>
   <rect width="1280" height="800" fill="url(#bg)"/>
-  <circle cx="500" cy="790" r="390" fill="#2d6bed" opacity=".08"/>
-  <text x="148" y="98" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="27" font-weight="720">Screenboard</text>
-  <text x="80" y="224" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="760">Take a screenshot.</text>
-  <text x="80" y="298" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="760">It’s copied.</text>
-  <text x="80" y="370" fill="#b9c7da" font-family="Segoe UI, Arial, sans-serif" font-size="23">Area, element, visible page, or full page.</text>
-  <text x="80" y="409" fill="#b9c7da" font-family="Segoe UI, Arial, sans-serif" font-size="23">The PNG is ready to paste.</text>
-  <text x="80" y="522" fill="#78e1b8" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2">AFTER A SUCCESSFUL CAPTURE</text>
-  <rect x="668" y="48" width="552" height="704" rx="34" fill="#17253a" stroke="#2b3e59" stroke-width="2"/>
-  <text x="720" y="118" fill="#8fa2bd" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2">CHOOSE A CAPTURE MODE</text>
+  <text x="80" y="294" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="760">Take a screenshot.</text>
+  <text x="80" y="369" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="760">It’s copied to your</text>
+  <text x="80" y="444" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="760">clipboard.</text>
+  <rect x="646" y="103" width="594" height="594" rx="28" fill="#17253a" stroke="#2b3e59" stroke-width="2"/>
 `))
-  .composite([
-    { input: heroIcon, left: 80, top: 60 },
-    { input: clipboardToast, left: 80, top: 545 },
-    { input: popupLight, left: 694, top: 160 },
-  ])
+  .composite([{ input: primaryPopup, left: 673, top: 148 }])
   .png({ compressionLevel: 9 })
   .toFile(resolve(screenshots, '01-copied-to-clipboard.png'));
 
