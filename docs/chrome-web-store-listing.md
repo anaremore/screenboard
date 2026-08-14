@@ -1,6 +1,6 @@
 # Chrome Web Store listing
 
-This is the submission copy for Screenboard 0.1.1. The upload file is `dist/screenboard-v0.1.1-chrome-web-store.zip`; upload the ZIP itself, without extracting it.
+This is the submission copy for Screenboard 0.1.2. The upload file is `dist/screenboard-v0.1.2-chrome-web-store.zip`; upload the ZIP itself, without extracting it.
 
 ## Store listing
 

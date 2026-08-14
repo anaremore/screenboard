@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Screenboard",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minimum_chrome_version": "116",
-  "description": "Capture any area, element, viewport, or page and paste it anywhere.",
+  "description": "Take screenshots of an area, element, visible page, or full page. Each capture is copied to your clipboard.",
   "permissions": [
     "activeTab",
     "scripting",
