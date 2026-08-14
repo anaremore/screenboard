@@ -7,31 +7,37 @@ This is the submission copy for Screenboard 0.1.1. The upload file is `dist/scre
 | Field | Fill in |
 | --- | --- |
 | Product name | `Screenboard` |
-| Summary | `Capture any area, element, viewport, or page and paste it anywhere.` |
-| Category | `Productivity` |
+| Summary | `Take screenshots of an area, element, visible page, or full page. Each capture is copied to your clipboard.` |
+| Category | `Tools` |
 | Language | `English (United States)` |
 | Homepage URL | `https://github.com/anaremore/screenboard` |
 | Support URL | `https://github.com/anaremore/screenboard/issues` |
 | Official URL | Leave blank unless you have verified a domain in the developer dashboard. |
 
+The short summary comes from the extension manifest in some versions of the dashboard. If the Summary field is not editable, use the revised wording in the next packaged extension update; the detailed description, links, and graphic assets can still be updated now.
+
 ### Detailed description
 
 ```text
-Screenboard makes screenshots ready to paste the moment a capture finishes.
+Screenboard takes screenshots and copies each PNG to your clipboard as soon as it is ready.
 
-Capture exactly what you need:
-• Drag over any area of a page
-• Capture the visible browser viewport
-• Capture an entire scrollable page
-• Point to and capture a specific page element
+Choose what to capture:
+• An area you drag over
+• One page element
+• The visible browser page
+• The full scrollable page
 
-Every successful capture is automatically copied as a PNG and confirmed on the page. Open Recent to copy it again, save it as a PNG, or delete it. Settings let you enable automatic downloads and choose how many recent captures to keep.
+After a capture:
+• Paste it immediately from your clipboard
+• Copy it again from Recent
+• Save it as a PNG or delete it from local history
+• Optionally download new captures automatically
 
-Private by design:
+Screenboard works locally:
 • No account
 • No external server or upload step
 • No analytics or advertising
-• Screenshots and recent history remain in local browser storage
+• Screenshots and Recent remain in your browser's local extension storage
 
 Area and visible captures include keyboard shortcuts. Chrome does not allow extensions to inject selection tools into protected pages such as chrome:// pages or the Chrome Web Store.
 ```
@@ -52,6 +58,8 @@ Upload these exact files:
 | Marquee promotional tile, 1400 × 560 | `store-assets/marquee-promo-1400x560.png` |
 
 A YouTube video is optional. The marquee promotional tile is also optional, but this kit includes one.
+
+Delete the current single screenshot before uploading this five-image set. Keep the numbered order shown above so the first image explains the capture-to-clipboard workflow and the later images cover selection, themes, Recent, and local settings.
 
 ## Privacy practices
 

@@ -36,7 +36,6 @@ await sharp({ create: { width: 128, height: 128, channels: 4, background: { r: 0
   .toFile(output('icon-128.png'));
 
 for (const [source, name] of [
-  ['capture-complete.png', '01-copied-to-clipboard.png'],
   ['selection.png', '02-select-an-area.png'],
   ['element-selection.png', '03-capture-an-element.png'],
 ]) {
@@ -49,6 +48,36 @@ for (const [source, name] of [
 const popupLight = await sharp(input('popup-recent.png')).resize({ width: 500 }).png().toBuffer();
 const popupDark = await sharp(input('popup-recent-dark.png')).resize({ width: 500 }).png().toBuffer();
 const settings = await sharp(input('settings.png')).resize({ height: 700 }).png().toBuffer();
+const heroIcon = await sharp(iconSource).resize(52, 52).png().toBuffer();
+
+const clipboardToast = svg(510, 66, `
+  <rect x="1" y="1" width="508" height="64" rx="12" fill="#111827" stroke="#465268" stroke-width="2"/>
+  <path d="M25 34l7 7 14-17" fill="none" stroke="#55d9a4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="61" y="40" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="650">Screenshot complete — copied to clipboard</text>
+`);
+
+await sharp(svg(1280, 800, `
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#0c1524"/><stop offset="1" stop-color="#13243a"/></linearGradient>
+  </defs>
+  <rect width="1280" height="800" fill="url(#bg)"/>
+  <circle cx="500" cy="790" r="390" fill="#2d6bed" opacity=".08"/>
+  <text x="148" y="98" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="27" font-weight="720">Screenboard</text>
+  <text x="80" y="224" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="760">Take a screenshot.</text>
+  <text x="80" y="298" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="760">It’s copied.</text>
+  <text x="80" y="370" fill="#b9c7da" font-family="Segoe UI, Arial, sans-serif" font-size="23">Area, element, visible page, or full page.</text>
+  <text x="80" y="409" fill="#b9c7da" font-family="Segoe UI, Arial, sans-serif" font-size="23">The PNG is ready to paste.</text>
+  <text x="80" y="522" fill="#78e1b8" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2">AFTER A SUCCESSFUL CAPTURE</text>
+  <rect x="668" y="48" width="552" height="704" rx="34" fill="#17253a" stroke="#2b3e59" stroke-width="2"/>
+  <text x="720" y="118" fill="#8fa2bd" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2">CHOOSE A CAPTURE MODE</text>
+`))
+  .composite([
+    { input: heroIcon, left: 80, top: 60 },
+    { input: clipboardToast, left: 80, top: 545 },
+    { input: popupLight, left: 694, top: 160 },
+  ])
+  .png({ compressionLevel: 9 })
+  .toFile(resolve(screenshots, '01-copied-to-clipboard.png'));
 
 await sharp(svg(1280, 800, `
   <rect width="1280" height="800" fill="#0f1929"/>
@@ -71,23 +100,23 @@ await sharp(svg(1280, 800, `
   <rect width="1280" height="800" fill="url(#bg)"/>
   <circle cx="180" cy="700" r="430" fill="#0ea56f" opacity=".12"/>
   <rect x="704" y="50" width="526" height="700" rx="34" fill="#ffffff" opacity=".06"/>
-  <text x="78" y="190" fill="#61d9ac" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="3">PRIVATE BY DESIGN</text>
-  <text x="78" y="278" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="60" font-weight="750">Your screenshots</text>
-  <text x="78" y="346" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="60" font-weight="750">stay in Chrome.</text>
-  <text x="78" y="424" fill="#b7c5da" font-family="Segoe UI, Arial, sans-serif" font-size="24">Control automatic saves and local history.</text>
-  <text x="78" y="463" fill="#b7c5da" font-family="Segoe UI, Arial, sans-serif" font-size="24">Nothing is sent to an external service.</text>
+  <text x="78" y="190" fill="#61d9ac" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="3">LOCAL BY DEFAULT</text>
+  <text x="78" y="278" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="750">Screenshots stay</text>
+  <text x="78" y="344" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="750">in your browser.</text>
+  <text x="78" y="424" fill="#b7c5da" font-family="Segoe UI, Arial, sans-serif" font-size="23">Recent captures and settings are stored locally.</text>
+  <text x="78" y="463" fill="#b7c5da" font-family="Segoe UI, Arial, sans-serif" font-size="23">Screenboard does not upload your screenshots.</text>
   <rect x="78" y="535" width="410" height="64" rx="16" fill="#17253a" stroke="#2e4665"/>
-  <circle cx="111" cy="567" r="8" fill="#28c98b"/><text x="137" y="576" fill="#edf5ff" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="650">Local-first capture history</text>
+  <circle cx="111" cy="567" r="8" fill="#28c98b"/><text x="137" y="576" fill="#edf5ff" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="650">No account · No analytics</text>
 `))
   .composite([{ input: settings, left: 729, top: 50 }])
   .png({ compressionLevel: 9 })
   .toFile(resolve(screenshots, '05-settings-and-privacy.png'));
 
-const smallIcon = await sharp(iconSource).resize(68, 68).png().toBuffer();
-await sharp(svg(440, 280, '<rect width="440" height="280" fill="#0f1929"/>'))
+const smallIcon = await sharp(iconSource).resize(82, 82).png().toBuffer();
+await sharp(svg(440, 280, '<defs><linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#0c1524"/><stop offset="1" stop-color="#152b45"/></linearGradient></defs><rect width="440" height="280" fill="url(#bg)"/>'))
   .composite([
-    { input: svg(440, 280, '<rect x="24" y="22" width="392" height="236" rx="26" fill="#131f32" stroke="#31445f"/><text x="112" y="90" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="750">Screenboard</text><text x="38" y="166" fill="#e6effd" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="650">Screenshots, straight</text><text x="38" y="197" fill="#e6effd" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="650">to your clipboard.</text><circle cx="42" cy="226" r="5" fill="#2dd69b"/><text x="56" y="232" fill="#aebed5" font-family="Segoe UI, Arial, sans-serif" font-size="14">Nothing is uploaded</text>') },
-    { input: smallIcon, left: 36, top: 38 },
+    { input: svg(440, 280, '<path d="M24 70V28h42M374 28h42v42M24 210v42h42M374 252h42v-42" fill="none" stroke="#4c83f3" stroke-width="3" stroke-linecap="round"/><text x="133" y="112" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="35" font-weight="750">Screenboard</text><text x="220" y="184" fill="#dce7f7" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="650" text-anchor="middle">Screenshots to clipboard.</text>') },
+    { input: smallIcon, left: 38, top: 64 },
   ])
   .png({ compressionLevel: 9 })
   .toFile(output('small-promo-440x280.png'));
@@ -96,7 +125,7 @@ const marqueePopup = await sharp(input('popup-recent.png')).resize({ width: 390 
 const marqueeIcon = await sharp(iconSource).resize(84, 84).png().toBuffer();
 await sharp(svg(1400, 560, '<rect width="1400" height="560" fill="#0f1929"/>'))
   .composite([
-    { input: svg(1400, 560, '<text x="154" y="181" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="68" font-weight="760">Screenboard</text><text x="76" y="290" fill="#f2f6ff" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700">Capture. Copy. Paste.</text><text x="76" y="346" fill="#b8c8de" font-family="Segoe UI, Arial, sans-serif" font-size="25">Area, element, visible, or full page.</text><circle cx="84" cy="405" r="7" fill="#2dd69b"/><text x="107" y="414" fill="#dce7f7" font-family="Segoe UI, Arial, sans-serif" font-size="21">Screenshots stay on this device.</text><rect x="900" y="60" width="430" height="440" rx="32" fill="#17253a"/>') },
+    { input: svg(1400, 560, '<text x="154" y="151" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="760">Screenboard</text><text x="76" y="264" fill="#f2f6ff" font-family="Segoe UI, Arial, sans-serif" font-size="43" font-weight="730">Take a screenshot.</text><text x="76" y="318" fill="#f2f6ff" font-family="Segoe UI, Arial, sans-serif" font-size="43" font-weight="730">It’s copied.</text><text x="76" y="375" fill="#b8c8de" font-family="Segoe UI, Arial, sans-serif" font-size="24">Area, element, visible page, or full page.</text><circle cx="84" cy="428" r="7" fill="#2dd69b"/><text x="107" y="437" fill="#dce7f7" font-family="Segoe UI, Arial, sans-serif" font-size="21">No account. No upload.</text><rect x="900" y="60" width="430" height="440" rx="32" fill="#17253a"/>') },
     { input: marqueeIcon, left: 54, top: 112 },
     { input: marqueePopup, left: 920, top: 84 },
   ])
