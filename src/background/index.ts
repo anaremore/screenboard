@@ -1,6 +1,6 @@
-import { CAPTURE_INTERVAL_MS, DEFAULT_SETTINGS, MAX_CANVAS_DIMENSION, MAX_CANVAS_PIXELS } from '../shared/constants';
+import { DEFAULT_SETTINGS, MAX_CANVAS_DIMENSION, MAX_CANVAS_PIXELS } from '../shared/constants';
 import { captureFeedback } from '../shared/capture-feedback';
-import { planFullPageSlices } from '../shared/full-page';
+import { planFullPageSlices, positionFullPageSlice } from '../shared/full-page';
 import type {
   CaptureRequestMessage,
   ContentMessage,
@@ -13,18 +13,12 @@ import type {
 import { normalizeSettings } from '../shared/settings';
 import type { CapturedSlice, CaptureSettings, CaptureType, FeedbackMessage, PageMetrics } from '../shared/types';
 import { isKnownProtectedPage } from '../shared/urls';
+import { savePng } from './downloads';
+import { createVisibleCapture } from './visible-capture';
+import { acquireJob, cancelSelection, claimSelection, releaseJob, removeTabJobs, type CaptureJob } from './jobs';
 
 const OFFSCREEN_PATH = 'offscreen.html';
-const JOBS_KEY = 'captureJobs';
-const JOB_MAX_AGE_MS = 5 * 60 * 1000;
 let creatingOffscreen: Promise<void> | undefined;
-
-interface CaptureJob {
-  mode: CaptureType;
-  startedAt: number;
-}
-
-type CaptureJobs = Record<string, CaptureJob>;
 
 async function settings(): Promise<CaptureSettings> {
   const stored = await chrome.storage.local.get('settings');
@@ -56,28 +50,6 @@ async function sendOffscreen(request: OffscreenRequest): Promise<OffscreenRespon
     request,
   };
   return chrome.runtime.sendMessage(envelope) as Promise<OffscreenResponse>;
-}
-
-async function readJobs(): Promise<CaptureJobs> {
-  const stored = await chrome.storage.session.get(JOBS_KEY);
-  const now = Date.now();
-  const jobs = (stored[JOBS_KEY] as CaptureJobs | undefined) ?? {};
-  const active = Object.fromEntries(Object.entries(jobs).filter(([, job]) => now - job.startedAt < JOB_MAX_AGE_MS));
-  if (Object.keys(active).length !== Object.keys(jobs).length) await chrome.storage.session.set({ [JOBS_KEY]: active });
-  return active;
-}
-
-async function acquireJob(tabId: number, mode: CaptureType): Promise<void> {
-  const jobs = await readJobs();
-  if (jobs[String(tabId)]) throw new Error('A Screenboard capture is already active in this tab.');
-  jobs[String(tabId)] = { mode, startedAt: Date.now() };
-  await chrome.storage.session.set({ [JOBS_KEY]: jobs });
-}
-
-async function releaseJob(tabId: number): Promise<void> {
-  const jobs = await readJobs();
-  delete jobs[String(tabId)];
-  await chrome.storage.session.set({ [JOBS_KEY]: jobs });
 }
 
 async function activeTab(explicitTabId?: number): Promise<chrome.tabs.Tab> {
@@ -129,12 +101,7 @@ async function showFeedback(tabId: number, feedback: FeedbackMessage): Promise<v
   }
 }
 
-async function captureVisible(tab: chrome.tabs.Tab): Promise<string> {
-  if (tab.windowId === undefined) throw new Error('This tab is no longer available.');
-  const [active] = await chrome.tabs.query({ active: true, windowId: tab.windowId });
-  if (active?.id !== tab.id) throw new Error('The active tab changed before Screenboard could capture it.');
-  return chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
-}
+const captureVisible = createVisibleCapture();
 
 async function hideScreenboardUi(tabId: number): Promise<void> {
   try {
@@ -148,7 +115,7 @@ async function hideScreenboardUi(tabId: number): Promise<void> {
 async function exportCapture(id: string): Promise<boolean> {
   const exported = await sendOffscreen({ operation: 'export-recent', id });
   if (!exported.ok || !('dataUrl' in exported)) return false;
-  await chrome.downloads.download({ url: exported.dataUrl, filename: exported.filename, saveAs: false });
+  await savePng(exported.dataUrl, exported.filename);
   return true;
 }
 
@@ -186,9 +153,10 @@ async function finalizeCapture(
   const copied = completedResult.clipboard.attempted && completedResult.clipboard.ok;
   const hasDestination = copied || saved;
 
-  if (!captureSettings.keepRecent && hasDestination) {
-    await sendOffscreen({ operation: 'delete-recent', id: completedResult.id });
-  }
+  const retention = await sendOffscreen({
+    operation: 'finalize-capture', id: result.id, settings: captureSettings, delivered: hasDestination,
+  }).catch(() => ({ ok: false as const, error: 'Recent history could not be updated. Open Recent to check for a recovery copy.' }));
+  const retentionWarning = !retention.ok ? retention.error : 'warning' in retention ? retention.warning : undefined;
 
   await chrome.storage.session.set({
     lastCaptureDiagnostics: {
@@ -199,12 +167,24 @@ async function finalizeCapture(
       clipboardOk: copied,
       clipboardError: completedResult.clipboard.error,
       saved,
+      historyWarning: retentionWarning,
       sliceCount: details.sliceCount,
       completedAt: Date.now(),
     },
   });
 
-  await showFeedback(tabId, captureFeedback(copied, saved));
+  const feedback = captureFeedback(copied, saved);
+  if (captureSettings.saveAutomatically && !saved) {
+    feedback.kind = 'warning';
+    feedback.message = copied
+      ? 'Copied to clipboard — automatic saving did not finish. Check Chrome Downloads.'
+      : 'Copying and saving did not finish — recover the PNG from Recent.';
+  }
+  if (retentionWarning) {
+    feedback.kind = 'warning';
+    feedback.message = `${copied ? 'Copied to clipboard.' : saved ? 'PNG saved.' : 'Clipboard blocked.'} ${retentionWarning}`;
+  }
+  await showFeedback(tabId, feedback).catch(() => undefined);
 }
 
 async function processVisible(tab: chrome.tabs.Tab): Promise<void> {
@@ -225,10 +205,10 @@ async function processVisible(tab: chrome.tabs.Tab): Promise<void> {
   await finalizeCapture(tabId, response, captureSettings, 'visible');
 }
 
-async function startSelection(tab: chrome.tabs.Tab, mode: 'area' | 'element'): Promise<void> {
+async function startSelection(tab: chrome.tabs.Tab, mode: 'area' | 'element', jobId: string): Promise<void> {
   const tabId = requireTabId(tab);
   await inject(tabId, 'assets/selector.js');
-  await chrome.tabs.sendMessage(tabId, { type: 'START_SELECTION', mode } satisfies ContentMessage);
+  await chrome.tabs.sendMessage(tabId, { type: 'START_SELECTION', mode, jobId } satisfies ContentMessage);
 }
 
 async function processSelection(
@@ -236,6 +216,7 @@ async function processSelection(
   message: Extract<ContentMessage, { type: 'SELECTION_COMMIT' }>,
 ): Promise<void> {
   const tabId = requireTabId(tab);
+  if (!await claimSelection(tabId, message.jobId, message.mode)) return;
   try {
     const dataUrl = await captureVisible(tab);
     const captureSettings = await settings();
@@ -251,14 +232,13 @@ async function processSelection(
     if (!('id' in response)) throw new Error('Image processing returned an unexpected result.');
     await finalizeCapture(tabId, response, captureSettings, message.mode);
   } catch (error) {
+    await chrome.storage.session.set({ lastCaptureDiagnostics: {
+      captureType: message.mode, failed: true, error: friendlyError(error), completedAt: Date.now(),
+    } });
     await showFeedback(tabId, { kind: 'error', message: friendlyError(error) });
   } finally {
-    await releaseJob(tabId);
+    await releaseJob(tabId, message.jobId);
   }
-}
-
-function delay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 async function processFullPage(tab: chrome.tabs.Tab): Promise<void> {
@@ -281,7 +261,6 @@ async function processFullPage(tab: chrome.tabs.Tab): Promise<void> {
     await chrome.tabs.sendMessage(tabId, { type: 'PREPARE_FULL_PAGE' } satisfies ContentMessage);
     prepared = true;
     const slices: CapturedSlice[] = [];
-    let lastCaptureAt = 0;
 
     for (const planned of plan) {
       const actual = await chrome.tabs.sendMessage(tabId, {
@@ -289,22 +268,16 @@ async function processFullPage(tab: chrome.tabs.Tab): Promise<void> {
         x: planned.scrollX,
         y: planned.scrollY,
         hideFixed: planned.index > 0,
-      } satisfies ContentMessage) as { scrollX: number; scrollY: number };
-      const wait = CAPTURE_INTERVAL_MS - (Date.now() - lastCaptureAt);
-      if (wait > 0) await delay(wait);
+      } satisfies ContentMessage) as { scrollX: number; scrollY: number; ok?: boolean; error?: string };
+      if (actual?.ok === false) throw new Error(actual.error ?? 'The page did not settle at the requested position.');
       const dataUrl = await captureVisible(tab);
-      lastCaptureAt = Date.now();
-      slices.push({
-        ...planned,
-        source: {
-          ...planned.source,
-          x: planned.destination.x - actual.scrollX,
-          y: planned.destination.y - actual.scrollY,
-        },
-        dataUrl,
-      });
+      slices.push({ ...positionFullPageSlice(planned, actual, metrics), dataUrl });
     }
 
+    // Restore the page as soon as pixels are collected; saving can take longer.
+    await chrome.tabs.sendMessage(tabId, { type: 'RESTORE_FULL_PAGE' } satisfies ContentMessage)
+      .then((response: { ok?: boolean } | undefined) => { prepared = response?.ok !== true; })
+      .catch(() => undefined);
     const captureSettings = await settings();
     const response = await sendOffscreen({
       operation: 'process-full-page',
@@ -324,23 +297,25 @@ async function processFullPage(tab: chrome.tabs.Tab): Promise<void> {
 }
 
 async function orchestrate(message: CaptureRequestMessage): Promise<{ started: true }> {
-  const tab = await activeTab(message.tabId);
-  const tabId = requireTabId(tab);
-  await acquireJob(tabId, message.mode);
+  let tabId: number | undefined;
+  let job: CaptureJob | undefined;
   try {
+    const tab = await activeTab(message.tabId);
+    tabId = requireTabId(tab);
+    job = await acquireJob(tabId, message.mode);
     if (message.mode !== 'visible' && isKnownProtectedPage(tab.url)) {
       throw new Error('Cannot access this protected browser page.');
     }
     if (message.mode === 'area' || message.mode === 'element') {
-      await startSelection(tab, message.mode);
+      await startSelection(tab, message.mode, job.id);
       return { started: true };
     }
     if (message.mode === 'visible') await processVisible(tab);
     else await processFullPage(tab);
-    await releaseJob(tabId);
+    await releaseJob(tabId, job.id);
     return { started: true };
   } catch (error) {
-    await releaseJob(tabId);
+    if (tabId !== undefined && job) await releaseJob(tabId, job.id);
     const errorMessage = friendlyError(error);
     await chrome.storage.session.set({
       lastCaptureDiagnostics: {
@@ -350,7 +325,7 @@ async function orchestrate(message: CaptureRequestMessage): Promise<{ started: t
         completedAt: Date.now(),
       },
     });
-    await showFeedback(tabId, { kind: 'error', message: errorMessage });
+    if (tabId !== undefined) await showFeedback(tabId, { kind: 'error', message: errorMessage }).catch(() => undefined);
     throw error;
   }
 }
@@ -374,12 +349,12 @@ chrome.runtime.onMessage.addListener((message: PopupRequest | ContentMessage | O
   if ('target' in message && message.target === 'offscreen') return false;
   if (!('type' in message)) return false;
   if (message.type === 'SELECTION_COMMIT' && sender.tab) {
-    void processSelection(sender.tab, message);
+    void processSelection(sender.tab, message).catch(() => undefined);
     sendResponse({ ok: true });
     return false;
   }
   if (message.type === 'SELECTION_CANCELLED' && sender.tab?.id !== undefined) {
-    void releaseJob(sender.tab.id);
+    void cancelSelection(sender.tab.id, message.jobId).catch(() => undefined);
     sendResponse({ ok: true });
     return false;
   }
@@ -415,7 +390,15 @@ chrome.commands.onCommand.addListener((command, tab) => {
   };
   const mode = modes[command];
   if (!mode) return;
-  void orchestrate({ type: 'CAPTURE_REQUEST', mode, tabId: tab?.id });
+  void orchestrate({ type: 'CAPTURE_REQUEST', mode, tabId: tab?.id }).catch(() => undefined);
+});
+
+chrome.tabs.onUpdated.addListener((tabId, change) => {
+  if (change.status === 'loading') void cancelSelection(tabId).catch(() => undefined);
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  void removeTabJobs(tabId).catch(() => undefined);
 });
 
 chrome.runtime.onInstalled.addListener(() => {

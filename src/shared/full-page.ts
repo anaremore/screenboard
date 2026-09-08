@@ -43,3 +43,26 @@ export function planFullPageSlices(metrics: PageMetrics): FullPageSlice[] {
 
   return slices;
 }
+
+export function positionFullPageSlice(
+  slice: FullPageSlice,
+  actual: { scrollX: number; scrollY: number },
+  viewport: Pick<PageMetrics, 'width' | 'height'>,
+): FullPageSlice {
+  const x = slice.destination.x - actual.scrollX;
+  const y = slice.destination.y - actual.scrollY;
+  // Fractional zoom can quantize a scroll by less than one CSS pixel. Anything
+  // larger means this viewport does not contain the pixels the plan requires.
+  if (![x, y].every(Number.isFinite) || x < -1 || y < -1
+    || x + slice.source.width > viewport.width + 1
+    || y + slice.source.height > viewport.height + 1) {
+    throw new Error('The page moved while capturing. Please wait for it to settle and try again.');
+  }
+  const left = Math.max(0, x);
+  const top = Math.max(0, y);
+  return { ...slice, source: {
+    x: left, y: top,
+    width: Math.min(slice.source.width, viewport.width - left),
+    height: Math.min(slice.source.height, viewport.height - top),
+  } };
+}

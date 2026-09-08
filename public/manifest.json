@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Screenboard",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "minimum_chrome_version": "116",
   "description": "Take screenshots of an area, element, visible page, or full page. Each capture is copied to your clipboard.",
   "permissions": [

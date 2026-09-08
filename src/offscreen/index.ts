@@ -4,7 +4,6 @@ import {
   MAX_CANVAS_PIXELS,
   MAX_HISTORY_BYTES,
 } from '../shared/constants';
-import { createCaptureFilename } from '../shared/filename';
 import { mapCssRectToImage } from '../shared/geometry';
 import { historyIdsToDelete } from '../shared/history';
 import type {
@@ -15,19 +14,7 @@ import type {
   ProcessResult,
   ProcessSingleRequest,
 } from '../shared/messages';
-import type { CaptureType, RecentCapture } from '../shared/types';
-
-interface CaptureRecord {
-  id: string;
-  type: CaptureType;
-  createdAt: number;
-  width: number;
-  height: number;
-  bytes: number;
-  filename: string;
-  image: Blob;
-  thumbnail: Blob;
-}
+import { CaptureStore, type CaptureRecord } from './capture-store';
 
 interface ScreenboardDatabase extends DBSchema {
   captures: {
@@ -45,6 +32,9 @@ function database(): Promise<IDBPDatabase<ScreenboardDatabase>> {
       const store = db.createObjectStore('captures', { keyPath: 'id' });
       store.createIndex('createdAt', 'createdAt');
     },
+  }).catch((error: unknown) => {
+    databasePromise = undefined;
+    throw error;
   });
   return databasePromise;
 }
@@ -83,38 +73,47 @@ async function createThumbnail(image: Blob): Promise<Blob> {
   try {
     const scale = Math.min(1, 160 / bitmap.width, 100 / bitmap.height);
     const canvas = createCanvas(Math.max(1, Math.round(bitmap.width * scale)), Math.max(1, Math.round(bitmap.height * scale)));
-    canvas.getContext('2d', { alpha: false })?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const context = canvas.getContext('2d', { alpha: false });
+    if (!context) throw new Error('Chrome could not initialize thumbnail processing.');
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     return await canvasToBlob(canvas);
   } finally {
     bitmap.close();
   }
 }
 
-async function storeCapture(type: CaptureType, image: Blob, width: number, height: number): Promise<CaptureRecord> {
-  const thumbnail = await createThumbnail(image);
-  const record: CaptureRecord = {
-    id: crypto.randomUUID(),
-    type,
-    createdAt: Date.now(),
-    width,
-    height,
-    bytes: image.size + thumbnail.size,
-    filename: createCaptureFilename(),
-    image,
-    thumbnail,
-  };
-  const db = await database();
-  await db.put('captures', record);
-  return record;
-}
-
-async function cleanHistory(maximumCount: number): Promise<void> {
-  const db = await database();
-  const records = await db.getAll('captures');
-  const ids = historyIdsToDelete(records, maximumCount, MAX_HISTORY_BYTES);
-  const transaction = db.transaction('captures', 'readwrite');
-  await Promise.all([...ids.map((id) => transaction.store.delete(id)), transaction.done]);
-}
+const captures = new CaptureStore({
+  async list() {
+    return (await database()).getAllFromIndex('captures', 'createdAt');
+  },
+  async get(id) {
+    return (await database()).get('captures', id);
+  },
+  async save(record, maximumCount) {
+    const db = await database();
+    const transaction = db.transaction('captures', 'readwrite');
+    try {
+      await transaction.store.put(record);
+      const stored = await transaction.store.getAll();
+      // Put the new capture first so equal timestamps do not discard it.
+      const candidates = [record, ...stored.filter((item) => item.id !== record.id)];
+      const ids = historyIdsToDelete(candidates, maximumCount, MAX_HISTORY_BYTES);
+      await Promise.all(ids.map((id) => transaction.store.delete(id)));
+      await transaction.done;
+      return !ids.includes(record.id);
+    } catch (error) {
+      try { transaction.abort(); } catch { /* The transaction may already have aborted. */ }
+      await transaction.done.catch(() => undefined);
+      throw error;
+    }
+  },
+  async delete(id) {
+    await (await database()).delete('captures', id);
+  },
+  async clear() {
+    await (await database()).clear('captures');
+  },
+}, createThumbnail, blobToDataUrl);
 
 async function processSingle(request: ProcessSingleRequest): Promise<ProcessResult> {
   const sourceBlob = await fetch(request.dataUrl).then((response) => response.blob());
@@ -128,16 +127,7 @@ async function processSingle(request: ProcessSingleRequest): Promise<ProcessResu
     if (!context) throw new Error('Chrome could not initialize image processing.');
     context.drawImage(bitmap, source.x, source.y, source.width, source.height, 0, 0, source.width, source.height);
     const image = await canvasToBlob(canvas);
-    const record = await storeCapture(request.captureType, image, canvas.width, canvas.height);
-    await cleanHistory(request.settings.maxRecent);
-    return {
-      ok: true,
-      id: record.id,
-      width: record.width,
-      height: record.height,
-      filename: record.filename,
-      clipboard: { attempted: false, ok: false },
-    };
+    return captures.create(request.captureType, image, canvas.width, canvas.height);
   } finally {
     bitmap.close();
   }
@@ -147,18 +137,14 @@ async function processFullPage(request: ProcessFullPageRequest): Promise<Process
   if (request.slices.length === 0) throw new Error('Chrome did not capture any page slices.');
   const firstBlob = await fetch(request.slices[0].dataUrl).then((response) => response.blob());
   const firstBitmap = await createImageBitmap(firstBlob);
-  const scaleX = firstBitmap.width / request.metrics.width;
-  const scaleY = firstBitmap.height / request.metrics.height;
-  const outputWidth = Math.round(request.metrics.pageWidth * scaleX);
-  const outputHeight = Math.round(request.metrics.pageHeight * scaleY);
-  const canvas = createCanvas(outputWidth, outputHeight);
-  const context = canvas.getContext('2d', { alpha: false });
-  if (!context) {
-    firstBitmap.close();
-    throw new Error('Chrome could not initialize image processing.');
-  }
-
   try {
+    const scaleX = firstBitmap.width / request.metrics.width;
+    const scaleY = firstBitmap.height / request.metrics.height;
+    const outputWidth = Math.round(request.metrics.pageWidth * scaleX);
+    const outputHeight = Math.round(request.metrics.pageHeight * scaleY);
+    const canvas = createCanvas(outputWidth, outputHeight);
+    const context = canvas.getContext('2d', { alpha: false });
+    if (!context) throw new Error('Chrome could not initialize image processing.');
     for (let index = 0; index < request.slices.length; index += 1) {
       const slice = request.slices[index];
       const bitmap = index === 0
@@ -180,53 +166,26 @@ async function processFullPage(request: ProcessFullPageRequest): Promise<Process
     }
 
     const image = await canvasToBlob(canvas);
-    const record = await storeCapture('full-page', image, outputWidth, outputHeight);
-    await cleanHistory(request.settings.maxRecent);
-    return {
-      ok: true,
-      id: record.id,
-      width: outputWidth,
-      height: outputHeight,
-      filename: record.filename,
-      clipboard: { attempted: false, ok: false },
-    };
+    return captures.create('full-page', image, outputWidth, outputHeight);
   } finally {
     firstBitmap.close();
   }
 }
 
-async function listRecents(): Promise<RecentCapture[]> {
-  const records = (await (await database()).getAllFromIndex('captures', 'createdAt')).reverse();
-  return Promise.all(records.map(async (record) => ({
-    id: record.id,
-    type: record.type,
-    createdAt: record.createdAt,
-    width: record.width,
-    height: record.height,
-    bytes: record.bytes,
-    filename: record.filename,
-    thumbnailDataUrl: await blobToDataUrl(record.thumbnail),
-  })));
-}
-
 async function handleRequest(request: OffscreenRequest): Promise<OffscreenResponse> {
   if (request.operation === 'process-single') return processSingle(request);
   if (request.operation === 'process-full-page') return processFullPage(request);
-  if (request.operation === 'list-recents') return { ok: true, captures: await listRecents() };
-
-  const db = await database();
+  if (request.operation === 'finalize-capture') return captures.finalize(request.id, request.settings, request.delivered);
+  if (request.operation === 'list-recents') return { ok: true, captures: await captures.list() };
   if (request.operation === 'clear-recents') {
-    await db.clear('captures');
+    await captures.clear();
     return { ok: true };
   }
   if (request.operation === 'delete-recent') {
-    await db.delete('captures', request.id);
+    await captures.delete(request.id);
     return { ok: true };
   }
-
-  const record = await db.get('captures', request.id);
-  if (!record) return { ok: false, error: 'That capture is no longer available.' };
-  return { ok: true, dataUrl: await blobToDataUrl(record.image), filename: record.filename };
+  return captures.export(request.id);
 }
 
 chrome.runtime.onMessage.addListener((message: OffscreenEnvelope, _sender, sendResponse) => {

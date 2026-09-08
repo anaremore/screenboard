@@ -5,6 +5,9 @@ import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
+import sharp from 'sharp';
+import { verifyFullPageScrolling } from './full-page-scroll.mjs';
+import { verifyContentScriptInjection } from './content-injection.mjs';
 
 const root = resolve('.');
 const nodeExecutable = process.execPath;
@@ -83,6 +86,10 @@ try {
     userDataDir: profileDirectory,
     defaultViewport: null,
     args: [
+      // Ubuntu 24 AppArmor can block CfT user namespaces. CI opens only repository
+      // fixtures in disposable profiles; normal local runs retain Chrome's sandbox.
+      // https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
+      ...(process.env.CI === 'true' && process.platform === 'linux' ? ['--no-sandbox'] : []),
       `--disable-extensions-except=${extensionDirectory}`,
       `--load-extension=${extensionDirectory}`,
       '--no-first-run',
@@ -93,6 +100,7 @@ try {
     ],
   });
 
+  await verifyFullPageScrolling(browser);
   console.log('Chrome connected; discovering the unpacked extension.');
   const extensionsPage = await browser.newPage();
   await extensionsPage.goto('chrome://extensions/', { waitUntil: 'domcontentloaded' });
@@ -130,6 +138,7 @@ try {
     (target) => target.type() === 'service_worker' && target.url().startsWith(`chrome-extension://${extensionId}/`),
     { timeout: 15_000 },
   );
+  await verifyContentScriptInjection(browser, popupPage, fixtureUrl);
   const emptyPopupHeight = await popupPage.$eval('.popup-shell', (element) => Math.ceil(element.getBoundingClientRect().height));
   await popupPage.setViewport({ width: 366, height: emptyPopupHeight, deviceScaleFactor: 2 });
   const settleTheme = (page) => page.evaluate(() => new Promise((resolvePromise) => {
@@ -184,7 +193,31 @@ try {
     document.getElementById('screenboard-toast-root')?.getAttribute('aria-label') === expectedMessage
   ), { timeout: 10_000, polling: 50 }, 'Screenshot complete — copied to clipboard');
 
+  const toastStyle = async () => {
+    const session = await fixturePage.createCDPSession();
+    try {
+      await session.send('DOM.enable');
+      await session.send('CSS.enable');
+      const { root: documentNode } = await session.send('DOM.getDocument', { depth: -1, pierce: true });
+      const findNode = (node, predicate) => {
+        if (predicate(node)) return node;
+        for (const child of [...(node.children ?? []), ...(node.shadowRoots ?? [])]) {
+          const found = findNode(child, predicate);
+          if (found) return found;
+        }
+      };
+      const host = findNode(documentNode, (node) => node.attributes?.includes('screenboard-toast-root'));
+      const toast = host && findNode(host, (node) => node.attributes?.includes('toast'));
+      assert.ok(toast, 'The completion toast should exist inside the closed shadow root');
+      const { computedStyle } = await session.send('CSS.getComputedStyleForNode', { nodeId: toast.nodeId });
+      return Object.fromEntries(computedStyle.map(({ name, value }) => [name, value]));
+    } finally {
+      await session.detach();
+    }
+  };
+
   await clearRecents();
+  await fixturePage.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
   const visibleStartedAt = Date.now();
   assert.equal((await startCapture('visible')).started, true);
   const visible = await waitForCapture('visible', visibleStartedAt);
@@ -192,7 +225,11 @@ try {
   assert.equal(visible.clipboardAttempted, true);
   assert.equal(visible.clipboardOk, true, `Offscreen image clipboard write failed: ${visible.clipboardError ?? 'unknown error'}`);
   await waitForCopiedFeedback();
+  const reducedMotionToast = await toastStyle();
+  assert.equal(reducedMotionToast.opacity, '1', 'Reduced-motion feedback must be visible without an animation');
+  assert.equal(reducedMotionToast['animation-name'], 'none');
   await fixturePage.screenshot({ path: resolve(resultsDirectory, 'capture-complete.png') });
+  await fixturePage.emulateMediaFeatures([]);
   const visibleRecents = await recents();
   assert.equal(visibleRecents.length, 1);
   const downloadDirectory = resolve(resultsDirectory, 'downloads');
@@ -291,6 +328,17 @@ try {
   assert.equal((await latestDiagnostics()).completedAt, beforeCancel);
   assert.equal((await call({ type: 'LIST_RECENTS' })).captures.length, 0);
 
+  for (const mode of ['area', 'element']) {
+    assert.equal((await begin(mode)).started, true);
+    await fixturePage.waitForSelector('#screenboard-capture-root');
+    await fixturePage.reload({ waitUntil: 'load' });
+    assert.equal((await begin(mode)).started, true, `${mode} capture should restart immediately after a reload`);
+    await fixturePage.waitForSelector('#screenboard-capture-root', { timeout: 5000 });
+    await fixturePage.keyboard.press('Escape');
+    await fixturePage.waitForSelector('#screenboard-capture-root', { hidden: true });
+    await resumedPopup.waitForFunction(async () => Object.keys((await chrome.storage.session.get('captureJobs')).captureJobs ?? {}).length === 0);
+  }
+
   await clear();
   const elementStartedAt = Date.now();
   assert.equal((await begin('element')).started, true);
@@ -308,9 +356,29 @@ try {
 
   await clear();
   await fixturePage.evaluate(() => window.scrollTo(0, 173));
+  const fixedMarker = await fixturePage.evaluate(() => {
+    const marker = document.createElement('div');
+    marker.id = 'fixed-regression-marker';
+    marker.style.cssText = 'position:fixed !important;visibility:visible !important;right:20px;top:10px;width:16px;height:16px;background:rgb(17,200,99);z-index:9999';
+    document.body.append(marker);
+    const rect = marker.getBoundingClientRect();
+    return { x: rect.left, y: rect.top, style: marker.getAttribute('style') };
+  });
+  const originalSticky = await fixturePage.$eval('#below-fold-sticky', (heading) => {
+    const rect = heading.getBoundingClientRect();
+    document.documentElement.style.setProperty('scroll-behavior', 'smooth', 'important');
+    return {
+      x: rect.left,
+      y: rect.top + scrollY,
+      properties: ['position', 'top', 'right', 'bottom', 'left', 'visibility'].map((name) => [name, heading.style.getPropertyValue(name), heading.style.getPropertyPriority(name)]),
+    };
+  });
+  assert.ok(originalSticky.y > geometryViewport.height, 'The regression heading must start below the first slice');
   const fullPageStartedAt = Date.now();
   assert.equal((await begin('full-page')).started, true);
   const fullPage = await wait('full-page', fullPageStartedAt);
+  assert.notEqual(fullPage.failed, true, fullPage.error);
+  await fixturePage.waitForFunction(() => !document.querySelector('style[data-screenboard-capture]'));
   const pageMetrics = await fixturePage.evaluate(() => ({
     width: innerWidth,
     height: innerHeight,
@@ -328,6 +396,34 @@ try {
   assert.equal(fullPage.sliceCount, Math.ceil(pageMetrics.pageHeight / pageMetrics.height));
   assert.equal(fullPage.clipboardOk, true);
   await waitForCopiedFeedback();
+  const restoredSticky = await fixturePage.$eval('#below-fold-sticky', (heading) => ({
+    visibility: getComputedStyle(heading).visibility,
+    properties: ['position', 'top', 'right', 'bottom', 'left', 'visibility'].map((name) => [name, heading.style.getPropertyValue(name), heading.style.getPropertyPriority(name)]),
+    scrollBehavior: document.documentElement.style.getPropertyValue('scroll-behavior'),
+    scrollPriority: document.documentElement.style.getPropertyPriority('scroll-behavior'),
+  }));
+  assert.deepEqual(restoredSticky.properties, originalSticky.properties, 'Sticky inline values and priorities should be restored');
+  assert.equal(restoredSticky.visibility, 'visible');
+  assert.equal(restoredSticky.scrollBehavior, 'smooth');
+  assert.equal(restoredSticky.scrollPriority, 'important');
+  assert.equal(await fixturePage.$eval('#fixed-regression-marker', (marker) => marker.getAttribute('style')), fixedMarker.style, 'Fixed visibility and its priority should be restored');
+  const [fullPageRecent] = await recents();
+  const fullPagePng = await call({ type: 'COPY_RECENT', id: fullPageRecent.id });
+  assert.equal(fullPagePng.ok, true, fullPagePng.error);
+  await writeFile(resolve(resultsDirectory, 'full-page-capture.png'), Buffer.from(fullPagePng.dataUrl.split(',')[1], 'base64'));
+  await writeFile(resolve(resultsDirectory, 'full-page-geometry.json'), JSON.stringify({ fullPage, pageMetrics, fixedMarker, originalSticky }, null, 2));
+  const scaleX = fullPage.width / pageMetrics.contentWidth;
+  const scaleY = fullPage.height / pageMetrics.pageHeight;
+  const stickyPixel = await sharp(Buffer.from(fullPagePng.dataUrl.split(',')[1], 'base64'))
+    .extract({ left: Math.round((originalSticky.x + 10) * scaleX), top: Math.round((originalSticky.y + 50) * scaleY), width: 1, height: 1 })
+    .removeAlpha().raw().toBuffer();
+  assert.deepEqual([...stickyPixel], [217, 24, 87], 'The below-fold sticky heading must appear at its document position in the stitched PNG');
+  const fixedPixelAt = (documentY) => sharp(Buffer.from(fullPagePng.dataUrl.split(',')[1], 'base64'))
+    .extract({ left: Math.round((fixedMarker.x + 5) * scaleX), top: Math.round(documentY * scaleY), width: 1, height: 1 })
+    .removeAlpha().raw().toBuffer();
+  assert.deepEqual([...(await fixedPixelAt(fixedMarker.y + 5))], [17, 200, 99], 'Fixed content should appear in the first slice');
+  assert.notDeepEqual([...(await fixedPixelAt(pageMetrics.height + fixedMarker.y + 5))], [17, 200, 99], 'Fixed content should not repeat in the second slice');
+  await fixturePage.evaluate(() => document.getElementById('fixed-regression-marker')?.remove());
 
   const protectedTabId = await resumedPopup.evaluate(async () => {
     const tabs = await chrome.tabs.query({});
@@ -347,6 +443,70 @@ try {
   }, { timeout: 10_000 }, protectedStartedAt);
   const protectedFailure = await latestDiagnostics();
   assert.equal(protectedFailure.error, "Screenboard can't capture this protected Chrome page.");
+
+  await clear();
+  for (let index = 0; index < 6; index += 1) {
+    // Chrome permits at most two captureVisibleTab calls per second.
+    await new Promise((done) => setTimeout(done, 600));
+    const startedAt = Date.now();
+    assert.equal((await begin('visible')).started, true);
+    const completed = await wait('visible', startedAt);
+    assert.notEqual(completed.failed, true, completed.error);
+  }
+  const retainedCaptures = await recents();
+  assert.equal(retainedCaptures.length, 6);
+  await resumedPopup.bringToFront();
+  await resumedPopup.reload({ waitUntil: 'domcontentloaded' });
+  await resumedPopup.waitForFunction(() => document.querySelectorAll('.recent-item').length === 6);
+  const historyPopupHeight = await resumedPopup.$eval('.popup-shell', (element) => Math.ceil(element.getBoundingClientRect().height));
+  await resumedPopup.setViewport({ width: 366, height: historyPopupHeight, deviceScaleFactor: 2 });
+  const oldestReachable = await resumedPopup.$eval('.recent-list', (list) => {
+    const last = list.lastElementChild;
+    last.scrollIntoView({ block: 'nearest' });
+    const bounds = list.getBoundingClientRect();
+    const row = last.getBoundingClientRect();
+    return { scrollable: list.scrollHeight > list.clientHeight, visible: row.top >= bounds.top && row.bottom <= bounds.bottom + 1 };
+  });
+  assert.deepEqual(oldestReachable, { scrollable: true, visible: true }, 'Every retained capture must remain reachable in the history list');
+  const previewTargetPromise = browser.waitForTarget((target) => target.type() === 'page' && target.url().startsWith(optionsUrl + '?capture='));
+  await resumedPopup.click('.recent-item:last-child .recent-preview');
+  const previewPage = await (await previewTargetPromise).page();
+  assert.ok(previewPage);
+  await previewPage.bringToFront();
+  await previewPage.waitForFunction(() => {
+    const image = document.querySelector('.preview-image img');
+    return image?.complete && image.naturalWidth > 0;
+  });
+  const previewDimensions = await previewPage.$eval('.preview-image img', (image) => [image.naturalWidth, image.naturalHeight]);
+  const previewedCapture = retainedCaptures.at(-1);
+  assert.deepEqual(previewDimensions, [previewedCapture.width, previewedCapture.height]);
+  await previewPage.screenshot({ path: resolve(resultsDirectory, 'capture-preview.png'), fullPage: true });
+  await previewPage.click('.preview-primary');
+  await previewPage.waitForFunction(() => document.querySelector('.page-notice.success')?.textContent === 'Copied to clipboard.');
+  const downloadsBeforePreview = await previewPage.evaluate(async () => (await chrome.downloads.search({})).map((download) => download.id));
+  const previewPng = await previewPage.$eval('.preview-image img', (image) => image.src);
+  await previewPage.click('::-p-aria(Save)');
+  await previewPage.waitForFunction(() => document.querySelector('.page-notice.success')?.textContent === 'PNG saved.');
+  const previewDownloads = await previewPage.evaluate(async (previousIds) => (
+    await chrome.downloads.search({})
+  ).filter((download) => !previousIds.includes(download.id)).map(({ id, state, filename, mime, error }) => ({ id, state, filename, mime, error })), downloadsBeforePreview);
+  assert.equal(previewDownloads.length, 1, 'Preview Save should create a new Chrome download');
+  const [previewDownload] = previewDownloads;
+  assert.equal(previewDownload.state, 'complete', previewDownload.error);
+  assert.equal(previewDownload.mime, 'image/png');
+  // CDP may reuse download.png for data URLs. Verify the new download's actual
+  // destination and bytes instead of counting filenames in the test directory.
+  assert.deepEqual(await readFile(previewDownload.filename), Buffer.from(previewPng.split(',')[1], 'base64'));
+  previewPage.once('dialog', (dialog) => { void dialog.accept(); });
+  await previewPage.click('.preview-delete');
+  await previewPage.waitForFunction(() => document.querySelector('.page-notice.success')?.textContent === 'Capture deleted.');
+  assert.equal(await previewPage.$('.preview-image img'), null);
+  const remaining = await extensionCall(previewPage, { type: 'LIST_RECENTS' });
+  assert.equal(remaining.captures.length, 5);
+  assert.ok(!remaining.captures.some((capture) => capture.id === previewedCapture.id));
+  const previewClosed = new Promise((done) => previewPage.once('close', done));
+  await previewPage.click('.preview-back');
+  await previewClosed;
 
   console.log(`E2E passed: extension ${extensionId}, visible ${visible.width}×${visible.height}, full page ${fullPage.width}×${fullPage.height}, ${fullPage.sliceCount} slices.`);
 } finally {

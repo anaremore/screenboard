@@ -52,6 +52,8 @@ export interface RecentCapture {
   bytes: number;
   filename: string;
   thumbnailDataUrl: string;
+  recovery?: boolean;
+  temporary?: boolean;
 }
 
 export type FeedbackKind = 'success' | 'warning' | 'error';

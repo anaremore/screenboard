@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planFullPageSlices } from '../../src/shared/full-page';
+import { planFullPageSlices, positionFullPageSlice } from '../../src/shared/full-page';
 import type { PageMetrics } from '../../src/shared/types';
 
 const metrics = (overrides: Partial<PageMetrics> = {}): PageMetrics => ({
@@ -51,5 +51,21 @@ describe('planFullPageSlices', () => {
 
   it('rejects invalid dimensions', () => {
     expect(() => planFullPageSlices(metrics({ pageHeight: 0 }))).toThrow(/greater than zero/i);
+  });
+});
+
+describe('positionFullPageSlice', () => {
+  const metrics = { width: 1000, height: 600, pageWidth: 1000, pageHeight: 1400, scrollX: 0, scrollY: 0, devicePixelRatio: 1 };
+  const plan = planFullPageSlices(metrics);
+  it('rejects an unsettled first scroll instead of stitching a black strip', () => {
+    expect(() => positionFullPageSlice(plan[0], { scrollX: 0, scrollY: 33 }, metrics)).toThrow('page moved');
+  });
+  it('preserves partial final slices at the document scroll limit', () => {
+    expect(positionFullPageSlice(plan[2], { scrollX: 0, scrollY: 800 }, metrics).source)
+      .toEqual({ x: 0, y: 400, width: 1000, height: 200 });
+  });
+  it('clamps subpixel scroll rounding to valid source pixels', () => {
+    const positioned = positionFullPageSlice(plan[0], { scrollX: 0.2, scrollY: 0.2 }, metrics);
+    expect(positioned.source).toEqual({ x: 0, y: 0, width: 1000, height: 600 });
   });
 });

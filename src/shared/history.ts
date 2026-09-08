@@ -13,11 +13,16 @@ export function historyIdsToDelete(
 ): string[] {
   const newestFirst = [...captures].sort((a, b) => b.createdAt - a.createdAt);
   let retainedBytes = 0;
+  let retainedCount = 0;
   const deletions: string[] = [];
 
-  newestFirst.forEach((capture, index) => {
+  newestFirst.forEach((capture) => {
+    if (retainedCount >= maximumCount || retainedBytes + capture.bytes > maximumBytes) {
+      deletions.push(capture.id);
+      return;
+    }
     retainedBytes += capture.bytes;
-    if (index >= maximumCount || retainedBytes > maximumBytes) deletions.push(capture.id);
+    retainedCount += 1;
   });
 
   return deletions;

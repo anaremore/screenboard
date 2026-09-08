@@ -1,0 +1,55 @@
+name: Verify and package
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - uses: pnpm/action-setup@v4
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+        with:
+          chrome-version: '146.0.7680.153'
+          install-dependencies: true
+      - name: Install X11 test input
+        run: sudo apt-get update && sudo apt-get install -y xvfb xdotool
+      - name: Typecheck, lint, unit tests, and production build
+        run: pnpm check
+      - name: Browser integration regressions
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          SCREENBOARD_HEADFUL: '1'
+        run: xvfb-run -a pnpm test:e2e
+      - name: Production activeTab permission smoke
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        run: xvfb-run -a pnpm test:permissions
+      - name: Package verified production build
+        run: pnpm package:release
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-test-results
+          path: test-results/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenboard-release
+          path: release/
+          if-no-files-found: error

@@ -1,6 +1,6 @@
 {
   "name": "screenboard",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "description": "Screenshots, straight to your clipboard.",
@@ -15,7 +15,9 @@
     "test:watch": "vitest",
     "test:e2e": "node tests/e2e/run.mjs",
     "store:assets": "node scripts/generate-store-assets.mjs",
-    "check": "tsc --noEmit && eslint . && vitest run && vite build"
+    "check": "tsc --noEmit && eslint . && vitest run && node scripts/generate-icons.mjs && vite build",
+    "test:permissions": "node tests/e2e/permissions.mjs",
+    "package:release": "node scripts/package-release.mjs"
   },
   "packageManager": "pnpm@11.16.0",
   "dependencies": {
@@ -41,5 +43,8 @@
     "typescript-eslint": "^8.19.1",
     "vite": "^6.0.7",
     "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=24.0.0 <25"
   }
 }

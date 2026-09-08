@@ -1,12 +1,12 @@
 # Screenboard privacy policy
 
-Effective date: August 13, 2026
+Effective date: September 7, 2026
 
 Screenboard is a local-first Chrome extension that captures a selected area, page element, visible viewport, or complete web page and copies the resulting PNG to the clipboard.
 
 ## Data Screenboard handles
 
-When the user starts a capture, Screenboard processes the pixels visible on the selected webpage. A screenshot can contain website content, including personal or user-generated content visible on that page. Screenboard also stores extension settings, short-lived capture diagnostics, and—when recent history is enabled—screenshot images and thumbnails.
+When the user starts a capture, Screenboard processes the pixels visible on the selected webpage. A screenshot can contain website content, including personal or user-generated content visible on that page. Screenboard also stores extension settings, short-lived capture diagnostics, and screenshot images and thumbnails for enabled history or recovery after a failed delivery.
 
 ## How data is used
 
@@ -14,7 +14,13 @@ Screenboard uses captured pixels only to create the screenshot requested by the 
 
 ## Storage, retention, and deletion
 
-Screenshot images and thumbnails are stored in the browser's local extension storage. They remain there until the user deletes them, clears capture history, reaches the configured history limit, or uninstalls the extension. Settings remain until changed, cleared with browser data, or removed by uninstalling Screenboard. Session diagnostics expire with the browser session.
+Screenboard first holds each PNG in memory while it attempts to copy it and, if enabled, download it. Screenshot delivery does not require permanent history storage.
+
+When recent history is enabled, screenshot images and thumbnails are stored in the browser's local extension storage. When history is disabled, new captures are discarded after a successful clipboard write or completed download. If neither delivery succeeds, Screenboard keeps a recovery copy in Recent so the user can try again. Turning history off does not delete existing captures; use Clear capture history to remove them.
+
+Stored captures, including recovery copies, remain until the user deletes them, clears history, reaches the configured count or 250 MiB storage limit, or uninstalls the extension. If a PNG is too large for history or local storage fails, Screenboard may keep a temporary copy in memory and labels it as session-only. These temporary copies are limited, may be removed as newer captures arrive, and do not survive the extension or browser restarting. Save any temporary capture you want to keep.
+
+Settings remain until changed, cleared with browser data, or removed by uninstalling Screenboard. Session diagnostics expire with the browser session.
 
 ## Sharing and transmission
 

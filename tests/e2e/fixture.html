@@ -27,6 +27,7 @@
       .band { display: flex; align-items: center; height: 420px; padding: 0 64px; font-size: 30px; font-weight: 720; }
       .band.one { background: #e6f8ef; color: #166534; }
       .band.two { background: #fff6d9; color: #854d0e; }
+      #below-fold-sticky { width: 220px; height: 64px; margin-left: 24px; background: rgb(217, 24, 87); color: white; font-size: 16px; }
       .band.three { background: #f4eafa; color: #7e22ce; }
       .footer { display: flex; align-items: center; justify-content: space-between; height: 160px; padding: 0 64px; background: #172033; color: white; }
     </style>
@@ -41,7 +42,7 @@
       <div class="mode-card"><h2>Four capture modes</h2><p>Pick the smallest capture that fits.</p><div class="modes"><span>Area</span><span>Element</span><span>Visible</span><span>Full page</span></div></div>
     </section>
     <section class="band one">Area capture</section>
-    <section class="band two">Visible capture</section>
+    <section class="band two">Visible capture<div id="below-fold-sticky" style="position: sticky !important; top: 0px !important; left: 0px !important; visibility: visible !important;">Sticky section heading</div></section>
     <section class="band three">Full-page capture</section>
     <footer class="footer"><strong>End of demo page</strong><span>Nothing here is uploaded.</span></footer>
   </body>

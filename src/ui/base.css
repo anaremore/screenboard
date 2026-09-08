@@ -8,11 +8,13 @@
   --surface-subtle: #f1f5f9;
   --text: #172033;
   --text-secondary: #536174;
-  --text-muted: #778397;
+  --text-muted: #647086;
   --border: #dfe5ec;
   --border-strong: #c9d2dd;
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
+  --button-accent: #2563eb;
+  --button-accent-hover: #1d4ed8;
   --accent-soft: #eaf1ff;
   --accent-text: #1746a2;
   --danger: #c62828;
@@ -38,6 +40,8 @@
     --border-strong: #3a4656;
     --accent: #4f83f7;
     --accent-hover: #6392fa;
+    --button-accent: #245fdb;
+    --button-accent-hover: #1d4ed8;
     --accent-soft: #1c2d50;
     --accent-text: #b8ceff;
     --danger: #ff8b8b;
@@ -64,13 +68,17 @@ body {
 button, select, input { font: inherit; }
 
 button { touch-action: manipulation; }
+button:disabled { cursor: wait; opacity: .6; }
 
 button:focus-visible,
 select:focus-visible,
 a:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--focus) 34%, transparent);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
+
+.spin { animation: ui-spin 800ms linear infinite; }
+@keyframes ui-spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

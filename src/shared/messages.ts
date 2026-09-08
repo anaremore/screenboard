@@ -29,6 +29,7 @@ export interface ProcessFullPageRequest {
 export type OffscreenRequest =
   | ProcessSingleRequest
   | ProcessFullPageRequest
+  | { operation: 'finalize-capture'; id: string; settings: CaptureSettings; delivered: boolean }
   | { operation: 'list-recents' }
   | { operation: 'export-recent'; id: string }
   | { operation: 'delete-recent'; id: string }
@@ -43,6 +44,13 @@ export interface ProcessResult {
   clipboard: { attempted: boolean; ok: boolean; error?: string };
 }
 
+export interface FinalizeCaptureResult {
+  ok: true;
+  retained: boolean;
+  temporary?: boolean;
+  warning?: string;
+}
+
 export interface OffscreenEnvelope {
   target: 'offscreen';
   requestId: string;
@@ -51,6 +59,7 @@ export interface OffscreenEnvelope {
 
 export type OffscreenResponse =
   | ProcessResult
+  | FinalizeCaptureResult
   | { ok: true; captures: RecentCapture[] }
   | { ok: true; dataUrl: string; filename: string }
   | { ok: true }
@@ -63,12 +72,12 @@ export type CaptureRequestMessage = {
 };
 
 export type ContentMessage =
-  | { type: 'START_SELECTION'; mode: 'area' | 'element' }
+  | { type: 'START_SELECTION'; mode: 'area' | 'element'; jobId: string }
   | { type: 'HIDE_SCREENBOARD_UI' }
   | { type: 'COPY_IMAGE'; dataUrl: string }
   | ({ type: 'SHOW_FEEDBACK' } & FeedbackMessage)
-  | { type: 'SELECTION_COMMIT'; mode: 'area' | 'element'; rect: Rect; viewport: ViewportMetrics }
-  | { type: 'SELECTION_CANCELLED' }
+  | { type: 'SELECTION_COMMIT'; mode: 'area' | 'element'; rect: Rect; viewport: ViewportMetrics; jobId: string }
+  | { type: 'SELECTION_CANCELLED'; jobId: string }
   | { type: 'GET_PAGE_METRICS' }
   | { type: 'PREPARE_FULL_PAGE' }
   | { type: 'SCROLL_FULL_PAGE'; x: number; y: number; hideFixed: boolean }

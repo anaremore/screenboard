@@ -3,7 +3,21 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), {
+    name: 'isolate-injected-content-scripts',
+    generateBundle(_options, bundle) {
+      // executeScript loads classic scripts into one shared isolated world. Keep
+      // each injection's lexical bindings private, including repeated injections.
+      for (const filename of ['assets/selector.js', 'assets/fullPage.js']) {
+        const chunk = bundle[filename];
+        if (!chunk || chunk.type !== 'chunk') this.error('Missing content-script bundle: ' + filename);
+        if (chunk.imports.length || chunk.dynamicImports.length || chunk.exports.length) {
+          this.error('Injected content scripts must be standalone: ' + filename);
+        }
+        chunk.code = '(() => {\n' + chunk.code + '\n})();\n';
+      }
+    },
+  }],
   build: {
     target: 'es2022',
     sourcemap: false,
